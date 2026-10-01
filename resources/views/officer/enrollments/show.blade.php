@@ -53,10 +53,14 @@
     <div class="card rounded-xl overflow-hidden">
         <div class="h-1.5 w-full" style="background: linear-gradient(90deg, var(--gold2), var(--gold3), var(--gold));"></div>
         <div class="px-6 py-5 flex items-center gap-5">
-            <div class="w-16 h-16 rounded-full flex items-center justify-center text-2xl font-black shrink-0"
-                 style="background: linear-gradient(135deg, var(--gold3), var(--gold)); color: var(--navy);">
-                {{ strtoupper(substr($user->name, 0, 1)) }}
-            </div>
+            @if($user->photo_path)
+                <img src="{{ Storage::url($user->photo_path) }}" alt="{{ $user->name }}" class="w-16 h-16 rounded-full object-cover shrink-0" style="border: 2px solid var(--gold);">
+            @else
+                <div class="w-16 h-16 rounded-full flex items-center justify-center text-2xl font-black shrink-0"
+                     style="background: linear-gradient(135deg, var(--gold3), var(--gold)); color: var(--navy);">
+                    {{ strtoupper(substr($user->name, 0, 1)) }}
+                </div>
+            @endif
             <div class="flex-1 min-w-0">
                 <h2 class="text-xl font-black" style="color: var(--navy);">{{ $user->name }}</h2>
                 <p class="text-sm text-slate-500">{{ $user->email }}</p>
@@ -103,11 +107,15 @@
             @php
                 $fields = [
                     'Date of Birth'  => $user->date_of_birth?->format('F d, Y'),
+                    'Place of Birth' => $user->place_of_birth,
                     'Age'            => $user->date_of_birth ? $user->date_of_birth->age . ' years old' : null,
                     'Gender'         => $user->gender,
                     'Blood Type'     => $user->blood_type,
                     'Religion'       => $user->religion,
+                    'College'        => $user->college,
+                    'Department'     => $user->department,
                     'Course / Year'  => $user->course_year,
+                    'Medical Cond.'  => $user->existing_medical_conditions,
                     'Height'         => $user->height ? $user->height . ' cm' : null,
                     'Weight'         => $user->weight ? $user->weight . ' kg' : null,
                     'Contact Number' => $user->contact_number,
@@ -123,7 +131,38 @@
             @endforeach
         </div>
     </div>
+    {{-- Documents section --}}
+    <div class="card rounded-xl p-6 space-y-4">
+        <div class="flex items-center gap-2 pb-2 border-b border-slate-100">
+            <svg class="w-4 h-4" style="color: var(--gold);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/>
+            </svg>
+            <h3 class="text-xs font-bold uppercase tracking-wider text-slate-600">Attached Documents</h3>
+        </div>
 
+        <div class="grid grid-cols-2 gap-4">
+            @foreach([
+                'diploma_path' => 'Photocopy of Diploma',
+                'birth_certificate_path' => 'Birth Certificate',
+                'medical_path' => 'Medical Certificate',
+                'parent_id_path' => 'Parent/Guardian ID',
+                'parent_consent_path' => 'Parent Consent Form'
+            ] as $field => $label)
+                <div class="p-3 border rounded-lg {{ $user->$field ? 'border-green-200 bg-green-50' : 'border-slate-200 bg-slate-50' }}">
+                    <p class="text-xs font-semibold text-slate-600 mb-2">{{ $label }}</p>
+                    @if($user->$field)
+                        <a href="{{ Storage::url($user->$field) }}" target="_blank" class="inline-flex items-center gap-1 text-sm font-bold text-blue-600 hover:text-blue-800">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                            View Document
+                        </a>
+                    @else
+                        <span class="text-sm text-slate-400 italic">Not provided</span>
+                    @endif
+                </div>
+            @endforeach
+        </div>
+    </div>
     {{-- Emergency contact --}}
     <div class="card rounded-xl p-6 space-y-4">
         <div class="flex items-center gap-2 pb-2 border-b border-slate-100">
@@ -159,106 +198,6 @@
         </div>
     @endif
 
-    {{-- Validate / Reject actions --}}
-    @if ($user->enrollment_status === 'pending')
-        <div class="card rounded-xl p-6 space-y-5">
-            <div class="flex items-center gap-2 pb-2 border-b border-slate-100">
-                <svg class="w-4 h-4" style="color: var(--gold);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                          d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                </svg>
-                <h3 class="text-xs font-bold uppercase tracking-wider text-slate-600">Enrollment Decision</h3>
-            </div>
-
-            <div class="text-xs text-slate-500 bg-slate-50 rounded-lg px-4 py-3 border border-slate-200">
-                Validating enables the cadet account. Rejecting disables it and notifies via the system.
-                You may add remarks for either decision.
-            </div>
-
-            {{-- Remarks field shared by both forms via Alpine --}}
-            <div x-data="{ remarks: '' }">
-                <label class="block text-xs font-semibold text-slate-600 mb-1.5">
-                    Remarks <span class="text-slate-400 font-normal">(optional)</span>
-                </label>
-                <textarea x-model="remarks"
-                          rows="3"
-                          placeholder="Add notes for this decision..."
-                          class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2"
-                          style="--tw-ring-color: var(--gold); resize: vertical;"></textarea>
-
-                <div class="flex items-center gap-3 mt-4">
-
-                    {{-- Validate button/form --}}
-                    <form method="POST" action="{{ route('officer.enrollments.validate', $user) }}"
-                          @submit.prevent="
-                              if (confirm('Validate enrollment for {{ addslashes($user->name) }}?')) {
-                                  $el.querySelector('[name=remarks]').value = remarks;
-                                  $el.submit();
-                              }
-                          ">
-                        @csrf @method('PATCH')
-                        <input type="hidden" name="remarks">
-                        <button type="submit"
-                                class="px-5 py-2 rounded-lg text-sm font-bold transition-all"
-                                style="background: #166534; color: #fff;">
-                            Validate Enrollment
-                        </button>
-                    </form>
-
-                    {{-- Reject button/form --}}
-                    <form method="POST" action="{{ route('officer.enrollments.reject', $user) }}"
-                          @submit.prevent="
-                              if (confirm('Reject enrollment for {{ addslashes($user->name) }}? This will disable their account.')) {
-                                  $el.querySelector('[name=remarks]').value = remarks;
-                                  $el.submit();
-                              }
-                          ">
-                        @csrf @method('PATCH')
-                        <input type="hidden" name="remarks">
-                        <button type="submit"
-                                class="px-5 py-2 rounded-lg text-sm font-bold transition-all"
-                                style="background: #7f1d1d; color: #fff;">
-                            Reject Enrollment
-                        </button>
-                    </form>
-
-                </div>
-            </div>
-        </div>
-
-    @elseif ($user->enrollment_status !== null)
-        {{-- Re-evaluate option for already-decided enrollees --}}
-        <div class="card rounded-xl p-5 flex items-center justify-between gap-4"
-             style="background: #f8fafc; border: 1px solid #e2e8f0;">
-            <p class="text-sm text-slate-500">
-                This enrollment was previously
-                <strong class="{{ $user->enrollment_status === 'validated' ? 'text-green-700' : 'text-red-700' }}">
-                    {{ $user->enrollment_status }}
-                </strong>.
-                You may reverse the decision below.
-            </p>
-            @if ($user->enrollment_status === 'validated')
-                <form method="POST" action="{{ route('officer.enrollments.reject', $user) }}"
-                      onsubmit="return confirm('Reverse: reject this enrollment?')">
-                    @csrf @method('PATCH')
-                    <button type="submit"
-                            class="text-xs px-3 py-1.5 rounded-lg font-bold"
-                            style="background: #fff5f5; color: #7f1d1d; border: 1px solid #fecaca;">
-                        Reject
-                    </button>
-                </form>
-            @else
-                <form method="POST" action="{{ route('officer.enrollments.validate', $user) }}"
-                      onsubmit="return confirm('Reverse: validate this enrollment?')">
-                    @csrf @method('PATCH')
-                    <button type="submit"
-                            class="text-xs px-3 py-1.5 rounded-lg font-bold"
-                            style="background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0;">
-                        Validate
-                    </button>
-                </form>
-            @endif
-        </div>
     @endif
 
 </div>

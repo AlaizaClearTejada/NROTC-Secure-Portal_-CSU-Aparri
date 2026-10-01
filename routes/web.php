@@ -3,12 +3,21 @@
 use App\Http\Controllers\Admin\AnnouncementController as AdminAnnouncementController;
 use App\Http\Controllers\Admin\AttendanceController as AdminAttendanceController;
 use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
+use App\Http\Controllers\Admin\EnrollmentController as AdminEnrollmentController;
+use App\Http\Controllers\Admin\PhotoController as AdminPhotoController;
 use App\Http\Controllers\Cadet\AnnouncementController as CadetAnnouncementController;
 use App\Http\Controllers\Cadet\AttendanceController as CadetAttendanceController;
 use App\Http\Controllers\Cadet\DashboardController as CadetDashboardController;
+use App\Http\Controllers\Cadet\EnrollmentController as CadetEnrollmentController;
+use App\Http\Controllers\Cadet\PhotoController as CadetPhotoController;
 use App\Http\Controllers\Officer\AttendanceController as OfficerAttendanceController;
 use App\Http\Controllers\Officer\DashboardController as OfficerDashboardController;
-use App\Http\Controllers\Officer\EnrollmentController as OfficerEnrollmentController;
+use App\Http\Controllers\Officer\CadetController as OfficerCadetController;
+use App\Http\Controllers\Officer\LectureMaterialController as OfficerLectureMaterialController;
+use App\Http\Controllers\Officer\ExamController as OfficerExamController;
+use App\Http\Controllers\Admin\ExamController as AdminExamController;
+use App\Http\Controllers\Cadet\LectureMaterialController as CadetLectureMaterialController;
+use App\Http\Controllers\Cadet\ExamController as CadetExamController;
 use App\Http\Controllers\ProfileController;
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
@@ -22,41 +31,11 @@ Route::get('/enroll', function () {
     return view('enroll');
 })->name('enroll');
 
-Route::get('/enroll/form', function () {
-    return view('enroll-form');
-})->name('enroll.form');
-
-Route::post('/enroll/form', function (\Illuminate\Http\Request $request) {
-    /** @var User $user */
-    $user = Auth::user();
-
-    if ($user) {
-        $address = collect([
-            $request->street,
-            $request->barangay,
-            $request->town_city,
-            $request->province,
-        ])->filter()->implode(', ');
-
-        $user->update([
-            'date_of_birth'          => $request->date_of_birth,
-            'gender'                 => $request->gender,
-            'blood_type'             => $request->blood_type,
-            'religion'               => $request->religion,
-            'contact_number'         => $request->cp_nr ?? $request->contact_number,
-            'course_year'            => $request->course_year,
-            'address'                => $address ?: $request->address,
-            'height'                 => $request->height,
-            'weight'                 => $request->weight,
-            'emergency_name'         => $request->emergency_name,
-            'emergency_relationship' => $request->emergency_relationship,
-            'emergency_contact'      => $request->emergency_contact,
-            'enrollment_status'      => User::ENROLLMENT_PENDING,
-        ]);
-    }
-
-    return back()->with('success', 'Your application has been submitted. The ROTC office will review it shortly.');
-})->name('enroll.form.submit');
+Route::middleware(['auth', 'verified'])->group(function () {
+    Route::get('/enroll/form', [CadetEnrollmentController::class, 'showForm'])->name('enroll.form');
+    Route::post('/enroll/form', [CadetEnrollmentController::class, 'submitForm'])->name('enroll.form.submit');
+    Route::get('/applicant/dashboard', [CadetEnrollmentController::class, 'applicantDashboard'])->name('cadet.applicant.dashboard');
+});
 
 // Authenticated users are redirected to their role-specific dashboard.
 Route::get('/dashboard', function () {
@@ -78,6 +57,14 @@ Route::middleware(['auth', 'verified', 'session.timeout', 'role:admin'])
         Route::post('users/{user}/unlock', [AdminDashboardController::class, 'unlockAccount'])->name('users.unlock');
         Route::get('users/{user}/toggle', fn() => redirect()->route('admin.dashboard'));
         Route::post('users/{user}/toggle', [AdminDashboardController::class, 'toggleActive'])->name('users.toggle');
+        // Enrollments
+        Route::get('enrollments', [AdminEnrollmentController::class, 'index'])->name('enrollments.index');
+        Route::post('enrollments/approve-all', [AdminEnrollmentController::class, 'approveAll'])->name('enrollments.approve_all');
+        Route::get('enrollments/{user}', [AdminEnrollmentController::class, 'show'])->name('enrollments.show');
+        Route::patch('enrollments/{user}/flag-medical', [AdminEnrollmentController::class, 'flagMedical'])->name('enrollments.flag_medical');
+        Route::patch('enrollments/{user}/request-revision', [AdminEnrollmentController::class, 'requestRevision'])->name('enrollments.request_revision');
+        Route::patch('enrollments/{user}/validate', [AdminEnrollmentController::class, 'validateEnrollment'])->name('enrollments.validate');
+        Route::patch('enrollments/{user}/reject', [AdminEnrollmentController::class, 'reject'])->name('enrollments.reject');
         // Announcements
         Route::get('announcements', [AdminAnnouncementController::class, 'index'])->name('announcements.index');
         Route::get('announcements/create', [AdminAnnouncementController::class, 'create'])->name('announcements.create');
@@ -89,6 +76,17 @@ Route::middleware(['auth', 'verified', 'session.timeout', 'role:admin'])
         Route::get('attendance', [AdminAttendanceController::class, 'index'])->name('attendance.index');
         Route::get('attendance/{user}', [AdminAttendanceController::class, 'show'])->name('attendance.show');
         Route::post('attendance/{user}', [AdminAttendanceController::class, 'update'])->name('attendance.update');
+        // Photo management
+        Route::post('users/{user}/photo', [AdminPhotoController::class, 'store'])->name('users.photo.store');
+        Route::delete('users/{user}/photo', [AdminPhotoController::class, 'destroy'])->name('users.photo.destroy');
+        
+        // Examinations
+        Route::resource('exams', AdminExamController::class);
+        Route::post('exams/{exam}/questions', [AdminExamController::class, 'storeQuestion'])->name('exams.questions.store');
+        Route::delete('exams/{exam}/questions/{question}', [AdminExamController::class, 'destroyQuestion'])->name('exams.questions.destroy');
+        Route::get('exams/{exam}/results', [AdminExamController::class, 'results'])->name('exams.results');
+        Route::get('exams/{exam}/results/{attempt}', [AdminExamController::class, 'showAttempt'])->name('exams.attempt');
+        Route::post('exams/{exam}/results/{attempt}', [AdminExamController::class, 'gradeAttempt'])->name('exams.attempt.grade');
     });
 
 // ── Officer routes ────────────────────────────────────────────────────────────
@@ -101,11 +99,20 @@ Route::middleware(['auth', 'verified', 'session.timeout', 'role:officer'])
         Route::get('attendance', [OfficerAttendanceController::class, 'index'])->name('attendance.index');
         Route::get('attendance/{user}', [OfficerAttendanceController::class, 'show'])->name('attendance.show');
         Route::get('grades', [OfficerDashboardController::class, 'grades'])->name('grades');
-        // Enrollment validation
-        Route::get('enrollments', [OfficerEnrollmentController::class, 'index'])->name('enrollments.index');
-        Route::get('enrollments/{user}', [OfficerEnrollmentController::class, 'show'])->name('enrollments.show');
-        Route::patch('enrollments/{user}/validate', [OfficerEnrollmentController::class, 'validate'])->name('enrollments.validate');
-        Route::patch('enrollments/{user}/reject', [OfficerEnrollmentController::class, 'reject'])->name('enrollments.reject');
+        // Enrolled Cadets
+        Route::get('cadets', [OfficerCadetController::class, 'index'])->name('cadets.index');
+        Route::get('cadets/{user}', [OfficerCadetController::class, 'show'])->name('cadets.show');
+        
+        // Lecture Materials
+        Route::resource('materials', OfficerLectureMaterialController::class)->except(['show']);
+        
+        // Examinations
+        Route::resource('exams', OfficerExamController::class);
+        Route::post('exams/{exam}/questions', [OfficerExamController::class, 'storeQuestion'])->name('exams.questions.store');
+        Route::delete('exams/{exam}/questions/{question}', [OfficerExamController::class, 'destroyQuestion'])->name('exams.questions.destroy');
+        Route::get('exams/{exam}/results', [OfficerExamController::class, 'results'])->name('exams.results');
+        Route::get('exams/{exam}/results/{attempt}', [OfficerExamController::class, 'showAttempt'])->name('exams.attempt');
+        Route::post('exams/{exam}/results/{attempt}', [OfficerExamController::class, 'gradeAttempt'])->name('exams.attempt.grade');
     });
 
 // ── Cadet routes ──────────────────────────────────────────────────────────────
@@ -116,8 +123,20 @@ Route::middleware(['auth', 'verified', 'session.timeout', 'role:cadet'])
         Route::get('dashboard', [CadetDashboardController::class, 'index'])->name('dashboard');
         Route::get('profile', [CadetDashboardController::class, 'profile'])->name('profile');
         Route::patch('profile', [CadetDashboardController::class, 'updateProfile'])->name('profile.update');
+        Route::post('profile/photo', [CadetPhotoController::class, 'store'])->name('profile.photo.store');
         Route::get('announcements', [CadetAnnouncementController::class, 'index'])->name('announcements');
         Route::get('attendance', [CadetAttendanceController::class, 'index'])->name('attendance');
+        
+        // Lecture Materials
+        Route::get('materials', [CadetLectureMaterialController::class, 'index'])->name('materials.index');
+        
+        // Examinations
+        Route::get('exams', [CadetExamController::class, 'index'])->name('exams.index');
+        Route::get('exams/{exam}', [CadetExamController::class, 'show'])->name('exams.show');
+        Route::post('exams/{exam}/start', [CadetExamController::class, 'start'])->name('exams.start');
+        Route::get('exams/{exam}/take', [CadetExamController::class, 'take'])->name('exams.take');
+        Route::post('exams/{exam}/submit', [CadetExamController::class, 'submit'])->name('exams.submit');
+        Route::post('exams/{exam}/tab-switch', [CadetExamController::class, 'tabSwitch'])->name('exams.tab-switch');
     });
 
 // ── Profile routes (accessible by all authenticated roles) ────────────────────

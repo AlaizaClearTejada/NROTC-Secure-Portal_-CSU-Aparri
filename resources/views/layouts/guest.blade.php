@@ -125,7 +125,11 @@
                 accent-color: #800000;
                 width: 15px;
                 height: 15px;
+                min-width: 15px;
                 cursor: pointer;
+                vertical-align: middle;
+                margin: 0;
+                flex-shrink: 0;
             }
             .auth-forgot {
                 font-size: .8rem;

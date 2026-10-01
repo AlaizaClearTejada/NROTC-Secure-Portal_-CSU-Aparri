@@ -1,4 +1,4 @@
-﻿@extends('layouts.app')
+@extends('layouts.app')
 
 @section('title', 'Admin Dashboard')
 @section('page-title', 'Administrator Dashboard')
@@ -82,6 +82,7 @@
             <table class="w-full text-sm">
                 <thead>
                     <tr style="background: #f8fafc;">
+                        <th class="px-6 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider">Photo</th>
                         <th class="px-6 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider">Name</th>
                         <th class="px-6 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider">ID Number</th>
                         <th class="px-6 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider">Email</th>
@@ -94,6 +95,19 @@
                 <tbody class="divide-y divide-slate-100">
                     @forelse ($recent_users as $user)
                         <tr class="hover:bg-slate-50 transition-colors">
+                            <td class="px-4 py-3">
+                                @if($user->photo_path)
+                                    <img src="{{ Storage::url($user->photo_path) }}"
+                                         alt="{{ $user->name }}"
+                                         class="w-9 h-9 rounded-full object-cover"
+                                         style="border: 2px solid var(--gold);">
+                                @else
+                                    <div class="w-9 h-9 rounded-full flex items-center justify-center text-xs font-black"
+                                         style="background: linear-gradient(135deg, var(--gold3), var(--gold)); color: var(--navy);">
+                                        {{ strtoupper(substr($user->name, 0, 1)) }}
+                                    </div>
+                                @endif
+                            </td>
                             <td class="px-6 py-4 text-slate-900 font-medium">{{ $user->name }}</td>
                             <td class="px-6 py-4 text-slate-500 font-mono text-xs">{{ $user->student_id ?? '—' }}</td>
                             <td class="px-6 py-4 text-slate-600">{{ $user->email }}</td>
@@ -129,7 +143,18 @@
                                 {{ $user->last_login_at ? $user->last_login_at->diffForHumans() : 'Never' }}
                             </td>
                             <td class="px-6 py-4">
-                                <div class="flex items-center gap-2">
+                                <div class="flex items-center gap-2 flex-wrap">
+                                    <button type="button"
+                                            onclick="openPhotoModal(
+                                                {{ $user->id }},
+                                                '{{ e(addslashes($user->name)) }}',
+                                                '{{ $user->photo_path ? Storage::url($user->photo_path) : '' }}',
+                                                '{{ route('admin.users.photo.store', $user) }}',
+                                                '{{ route('admin.users.photo.destroy', $user) }}'
+                                            )"
+                                            class="text-xs px-2 py-1 rounded font-medium transition-colors"
+                                            style="background: rgba(200,169,81,0.12); color: #c8a951; border: 1px solid rgba(200,169,81,0.3);">&#128247; Photo
+                                    </button>
                                     @if ($user->isLocked())
                                         <form method="POST" action="{{ route('admin.users.unlock', $user) }}">
                                             @csrf
@@ -186,3 +211,105 @@
     </div>
 
 @endsection
+
+@push('scripts')
+{{-- ── Photo Upload Modal ──────────────────────────────────────────────────── --}}
+<div id="photo-modal"
+     class="fixed inset-0 z-50 hidden flex items-center justify-center p-4"
+     style="background: rgba(4,9,15,0.6); backdrop-filter: blur(4px);"
+     onclick="if(event.target===this) closePhotoModal()">
+    <div class="w-full max-w-sm rounded-2xl overflow-hidden shadow-2xl"
+         style="background: #fff; animation: modalIn .2s ease;">
+        {{-- Header --}}
+        <div class="flex items-center justify-between px-5 py-4"
+             style="background: linear-gradient(135deg, var(--navy), #1a2744); border-bottom: 1px solid rgba(200,169,81,.2);">
+            <div>
+                <h3 class="text-sm font-black text-white">Manage Photo</h3>
+                <p id="photo-modal-name" class="text-xs mt-0.5" style="color: var(--gold);"></p>
+            </div>
+            <button onclick="closePhotoModal()"
+                    class="w-7 h-7 rounded-full flex items-center justify-center transition-colors"
+                    style="background: rgba(255,255,255,0.1); color: #94a3b8;">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
+        </div>
+
+        <div class="p-5 space-y-4">
+            {{-- Current photo preview --}}
+            <div class="flex flex-col items-center gap-3">
+                <div id="photo-modal-preview" class="w-24 h-24 rounded-full overflow-hidden shrink-0"
+                     style="border: 3px solid var(--gold); box-shadow: 0 4px 20px rgba(200,169,81,.3);">
+                </div>
+                <p class="text-xs text-slate-400">Current 2×2 photo</p>
+            </div>
+
+            {{-- Upload new photo form --}}
+            <form id="photo-modal-upload-form" method="POST" enctype="multipart/form-data" class="space-y-3">
+                @csrf
+                <label class="block">
+                    <span class="text-xs font-semibold text-slate-700 mb-1 block">Upload New 2×2 Photo</span>
+                    <input type="file"
+                           id="photo-modal-file"
+                           name="photo"
+                           accept="image/jpeg,image/png,image/jpg"
+                           class="block w-full text-xs text-slate-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:cursor-pointer"
+                           style="file:background: rgba(200,169,81,0.15); file:color: #c8a951;">
+                </label>
+                <button type="submit"
+                        class="w-full py-2 rounded-xl text-sm font-bold transition-all"
+                        style="background: linear-gradient(135deg, var(--gold3), var(--gold)); color: var(--navy);">
+                    Upload Photo
+                </button>
+            </form>
+
+            {{-- Remove photo --}}
+            <form id="photo-modal-remove-form" method="POST" class="pt-2 border-t border-slate-100">
+                @csrf
+                @method('DELETE')
+                <button type="submit"
+                        id="photo-modal-remove-btn"
+                        class="w-full py-1.5 rounded-xl text-xs font-semibold transition-colors"
+                        style="background: rgba(248,113,113,0.1); color: #f87171; border: 1px solid rgba(248,113,113,0.2);">
+                    Remove Photo
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+    @keyframes modalIn { from { opacity:0; transform:scale(.92) translateY(12px); } to { opacity:1; transform:none; } }
+</style>
+
+<script>
+    function openPhotoModal(id, name, photoUrl, uploadUrl, removeUrl) {
+        document.getElementById('photo-modal-name').textContent = name;
+
+        const preview = document.getElementById('photo-modal-preview');
+        if (photoUrl) {
+            preview.innerHTML = '<img src="' + photoUrl + '" class="w-full h-full object-cover" alt="' + name + '">';
+        } else {
+            preview.innerHTML = '<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:2rem;font-weight:900;background:linear-gradient(135deg,var(--gold3),var(--gold));color:var(--navy);">'
+                + name.charAt(0).toUpperCase() + '</div>';
+        }
+
+        document.getElementById('photo-modal-upload-form').action = uploadUrl;
+        document.getElementById('photo-modal-remove-form').action = removeUrl;
+
+        const removeBtn = document.getElementById('photo-modal-remove-btn');
+        removeBtn.disabled = !photoUrl;
+        removeBtn.style.opacity = photoUrl ? '1' : '0.4';
+        removeBtn.style.cursor = photoUrl ? 'pointer' : 'not-allowed';
+
+        document.getElementById('photo-modal').classList.remove('hidden');
+        document.getElementById('photo-modal').style.display = 'flex';
+    }
+
+    function closePhotoModal() {
+        document.getElementById('photo-modal').style.display = 'none';
+        document.getElementById('photo-modal').classList.add('hidden');
+    }
+</script>
+@endpush

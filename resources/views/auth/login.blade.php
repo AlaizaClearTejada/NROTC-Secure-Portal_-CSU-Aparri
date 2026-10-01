@@ -1,4 +1,8 @@
 <x-guest-layout>
+<style>
+    .icon-pl { padding-left: 2.5rem !important; }
+    .icon-pr { padding-right: 2.5rem !important; }
+</style>
 
     {{-- Enrollment context banner --}}
     @if (!empty($enrollMode))
@@ -32,15 +36,18 @@
         {{-- ID Number --}}
         <div style="margin-bottom: 1.125rem;">
             <label class="auth-label" for="login_id">ID Number</label>
-            <input class="auth-input @error('login_id') is-error @enderror"
-                   type="text"
-                   id="login_id"
-                   name="login_id"
-                   value="{{ old('login_id') }}"
-                   placeholder="e.g. 2024-00001"
-                   autocomplete="username"
-                   autofocus
-                   required>
+            <div style="position: relative;">
+                <svg style="position:absolute;left:.75rem;top:50%;transform:translateY(-50%);width:16px;height:16px;color:#9ca3af;pointer-events:none;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0m-5 8a2 2 0 100-4 2 2 0 000 4zm0 0c1.306 0 2.417.835 2.83 2M9 14a3.001 3.001 0 00-2.83 2M15 11h3m-3 4h2"></path></svg>
+                <input class="auth-input icon-pl @error('login_id') is-error @enderror"
+                       type="text"
+                       id="login_id"
+                       name="login_id"
+                       value="{{ old('login_id') }}"
+                       placeholder="e.g. 2024-00001"
+                       autocomplete="username"
+                       autofocus
+                       required>
+            </div>
             @error('login_id')
                 <div class="auth-field-error" id="login_id-error" role="alert">{{ $message }}</div>
             @enderror
@@ -51,7 +58,8 @@
         <div style="margin-bottom: 1.125rem;">
             <label class="auth-label" for="password">Password</label>
             <div style="position: relative;">
-                <input class="auth-input @error('password') is-error @enderror"
+                <svg class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
+                <input class="auth-input icon-pl icon-pr @error('password') is-error @enderror"
                        type="password"
                        id="password"
                        name="password"
@@ -75,8 +83,8 @@
         {{-- Remember me + Forgot password --}}
         <div class="auth-extras">
             <label class="auth-check-label" for="remember_me">
-                <input type="checkbox" id="remember_me" name="remember">
-                Remember me
+                <input type="checkbox" id="remember_me" name="remember" class="shrink-0 text-[#800000] focus:ring-[#800000]">
+                <span class="whitespace-nowrap">Remember me</span>
             </label>
             @if (Route::has('password.request'))
                 <a class="auth-forgot" href="{{ route('password.request') }}">Forgot password?</a>
@@ -119,17 +127,23 @@
         var passwordInput = document.getElementById('password');
         var idErr = document.getElementById('login_id-client-error');
         var passwordErr = document.getElementById('password-client-error');
+        var idServerErr = document.getElementById('login_id-error');
+        var passwordServerErr = document.getElementById('password-error');
 
         function showError(input, errEl, msg) {
             input.classList.add('is-error');
             errEl.textContent = msg;
             errEl.style.display = 'block';
+            if (input === idInput && idServerErr) idServerErr.style.display = 'none';
+            if (input === passwordInput && passwordServerErr) passwordServerErr.style.display = 'none';
         }
 
         function clearError(input, errEl) {
             input.classList.remove('is-error');
             errEl.textContent = '';
             errEl.style.display = 'none';
+            if (input === idInput && idServerErr) idServerErr.style.display = 'none';
+            if (input === passwordInput && passwordServerErr) passwordServerErr.style.display = 'none';
         }
 
         function validateId() {

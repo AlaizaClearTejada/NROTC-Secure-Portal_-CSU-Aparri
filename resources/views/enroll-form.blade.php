@@ -101,6 +101,28 @@
         .confirm-wrap { display:flex; align-items:flex-start; gap:.75rem; padding:1rem 1.25rem; border-radius:.875rem;
                         background:rgba(128,0,0,.03); border:1px solid rgba(128,0,0,.12); cursor:pointer; }
         .confirm-wrap input[type=checkbox] { accent-color:#800000; width:1rem; height:1rem; margin-top:.1rem; flex-shrink:0; }
+
+        /* ── Step Validation Highlights ── */
+        .is-invalid-step {
+            border-color: #ef4444 !important;
+            box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.25) !important;
+            animation: shakeErr 0.3s ease-in-out;
+        }
+        .pill-group.is-invalid-step {
+            padding: .35rem;
+            border: 1px solid #ef4444 !important;
+            border-radius: .625rem;
+            background: rgba(239, 68, 68, 0.04);
+        }
+        .photo-zone.is-invalid-step, .upload-zone.is-invalid-step {
+            border-color: #ef4444 !important;
+            background: rgba(239, 68, 68, 0.04) !important;
+        }
+        @keyframes shakeErr {
+            0%, 100% { transform: translateX(0); }
+            20%, 60% { transform: translateX(-4px); }
+            40%, 80% { transform: translateX(4px); }
+        }
     </style>
 </head>
 <body class="font-sans antialiased">
@@ -162,7 +184,7 @@
                 ['n'=>6,'label'=>'Review'],
             ]; @endphp
             @foreach ($stepDefs as $sd)
-                <div class="step-node">
+                <div class="step-node cursor-pointer" onclick="goToStep({{ $sd['n'] }})">
                     <div class="step-dot {{ $sd['n'] === 1 ? 'active' : '' }}" id="dot-{{ $sd['n'] }}">
                         <span id="dot-icon-{{ $sd['n'] }}">{{ $sd['n'] }}</span>
                     </div>
@@ -198,7 +220,7 @@
         <p style="font-size:.6rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#800000;margin:0 0 .65rem;">Progress</p>
         <div id="sidebar-steps" style="display:flex;flex-direction:column;gap:.35rem;">
             @foreach ([['n'=>1,'label'=>'Personal Info'],['n'=>2,'label'=>'Family & Contact'],['n'=>3,'label'=>'RIDS Form'],['n'=>4,'label'=>'133rd NROTC Unit'],['n'=>5,'label'=>'Attachments'],['n'=>6,'label'=>'Review']] as $sd)
-            <div id="sb-step-{{ $sd['n'] }}" style="display:flex;align-items:center;gap:.5rem;padding:.3rem .45rem;border-radius:.45rem;transition:background .2s;">
+            <div id="sb-step-{{ $sd['n'] }}" class="cursor-pointer" onclick="goToStep({{ $sd['n'] }})" style="display:flex;align-items:center;gap:.5rem;padding:.3rem .45rem;border-radius:.45rem;transition:background .2s;cursor:pointer;">
                 <span id="sb-dot-{{ $sd['n'] }}" style="width:.55rem;height:.55rem;border-radius:9999px;flex-shrink:0;background:#e5e7eb;transition:background .2s;"></span>
                 <span id="sb-lbl-{{ $sd['n'] }}" style="font-size:.7rem;font-weight:600;color:#9ca3af;transition:color .2s;line-height:1.2;">{{ $sd['label'] }}</span>
             </div>
@@ -298,11 +320,11 @@
                         <p class="lbl mb-3">Full Name</p>
                         <div class="grid grid-cols-3 gap-3">
                             <div class="fl"><label class="lbl" for="last_name">Last Name <span class="req">*</span></label>
-                                <input id="last_name" name="last_name" type="text" class="inp" placeholder="dela Cruz" required></div>
+                                <input id="last_name" name="last_name" type="text" class="inp" placeholder="dela Cruz" value="{{ old('last_name', Auth::user()->last_name ?? '') }}" required></div>
                             <div class="fl"><label class="lbl" for="first_name">First Name <span class="req">*</span></label>
-                                <input id="first_name" name="first_name" type="text" class="inp" placeholder="Juan" required></div>
+                                <input id="first_name" name="first_name" type="text" class="inp" placeholder="Juan" value="{{ old('first_name', Auth::user()->first_name ?? '') }}" required></div>
                             <div class="fl"><label class="lbl" for="middle_name">Middle Name</label>
-                                <input id="middle_name" name="middle_name" type="text" class="inp" placeholder="Santos"></div>
+                                <input id="middle_name" name="middle_name" type="text" class="inp" placeholder="Santos" value="{{ old('middle_name', Auth::user()->middle_name ?? '') }}"></div>
                         </div>
                     </div>
 
@@ -311,31 +333,42 @@
                     {{-- DOB / Age / Gender --}}
                     <div class="grid grid-cols-3 gap-3">
                         <div class="fl"><label class="lbl" for="dob">Date of Birth <span class="req">*</span></label>
-                            <input id="dob" name="date_of_birth" type="date" class="inp" required></div>
+                            <input id="dob" name="date_of_birth" type="date" class="inp" value="{{ old('date_of_birth', optional(Auth::user()->date_of_birth)->format('Y-m-d') ?? '') }}" required></div>
                         <div class="fl"><label class="lbl" for="age">Age <span class="req">*</span></label>
                             <input id="age" name="age" type="number" min="15" max="35" class="inp" placeholder="Auto-calculated" readonly required style="background:#f3f4f6;cursor:default;color:#6b7280;"></div>
                         <div class="fl"><label class="lbl" for="gender">Gender <span class="req">*</span></label>
                             <select id="gender" name="gender" class="inp" required>
-                                <option value="" disabled selected>Select</option>
-                                <option>Male</option><option>Female</option>
+                                <option value="" disabled {{ !old('gender', Auth::user()->gender ?? '') ? 'selected' : '' }}>Select</option>
+                                <option {{ old('gender', Auth::user()->gender ?? '') === 'Male' ? 'selected' : '' }}>Male</option>
+                                <option {{ old('gender', Auth::user()->gender ?? '') === 'Female' ? 'selected' : '' }}>Female</option>
                             </select>
                         </div>
                     </div>
 
-                    {{-- Course / Religion / Blood Type --}}
+                    {{-- College / Department / Course --}}
                     <div class="grid grid-cols-3 gap-3">
+                        <div class="fl"><label class="lbl" for="college">College <span class="req">*</span></label>
+                            <input id="college" name="college" type="text" class="inp" placeholder="e.g. CCJE" value="{{ old('college', Auth::user()->college ?? '') }}" required></div>
+                        <div class="fl"><label class="lbl" for="department">Department <span class="req">*</span></label>
+                            <input id="department" name="department" type="text" class="inp" placeholder="e.g. Criminology" value="{{ old('department', Auth::user()->department ?? '') }}" required></div>
                         <div class="fl"><label class="lbl" for="course">Course / Year <span class="req">*</span></label>
-                            <input id="course" name="course_year" type="text" class="inp" placeholder="BSCrim 2" required></div>
+                            <input id="course" name="course_year" type="text" class="inp" placeholder="BSCrim 2" value="{{ old('course_year', Auth::user()->course_year ?? '') }}" required></div>
+                    </div>
+
+                    {{-- Religion / Blood Type / Medical Conditions --}}
+                    <div class="grid grid-cols-3 gap-3 mt-3">
                         <div class="fl"><label class="lbl" for="religion">Religion</label>
-                            <input id="religion" name="religion" type="text" class="inp" placeholder="Roman Catholic"></div>
+                            <input id="religion" name="religion" type="text" class="inp" placeholder="Roman Catholic" value="{{ old('religion', Auth::user()->religion ?? '') }}"></div>
                         <div class="fl"><label class="lbl" for="blood_type">Blood Type</label>
                             <select id="blood_type" name="blood_type" class="inp">
-                                <option value="" disabled selected>Select</option>
+                                <option value="" disabled {{ !old('blood_type', Auth::user()->blood_type ?? '') ? 'selected' : '' }}>Select</option>
                                 @foreach (['A+','A−','B+','B−','AB+','AB−','O+','O−'] as $bt)
-                                    <option>{{ $bt }}</option>
+                                    <option {{ old('blood_type', Auth::user()->blood_type ?? '') === $bt ? 'selected' : '' }}>{{ $bt }}</option>
                                 @endforeach
                             </select>
                         </div>
+                        <div class="fl"><label class="lbl" for="existing_medical_conditions">Existing Medical Conditions</label>
+                            <input id="existing_medical_conditions" name="existing_medical_conditions" type="text" class="inp" placeholder="e.g. Asthma (or None)" value="{{ old('existing_medical_conditions', Auth::user()->existing_medical_conditions ?? '') }}"></div>
                     </div>
 
                     <hr class="divider">
@@ -345,14 +378,14 @@
                         <p class="lbl mb-3">Current Address</p>
                         <div class="flex flex-col gap-3">
                             <div class="fl"><label class="lbl" for="street">Street / House No. <span class="req">*</span></label>
-                                <input id="street" name="street" type="text" class="inp" placeholder="House/Unit No. and Street Name" required></div>
+                                <input id="street" name="street" type="text" class="inp" placeholder="House/Unit No. and Street Name" value="{{ old('street') }}" required></div>
                             <div class="grid grid-cols-3 gap-3">
                                 <div class="fl"><label class="lbl" for="barangay">Barangay <span class="req">*</span></label>
-                                    <input id="barangay" name="barangay" type="text" class="inp" placeholder="Barangay" required></div>
+                                    <input id="barangay" name="barangay" type="text" class="inp" placeholder="Barangay" value="{{ old('barangay') }}" required></div>
                                 <div class="fl"><label class="lbl" for="town_city">Town / City <span class="req">*</span></label>
-                                    <input id="town_city" name="town_city" type="text" class="inp" placeholder="Town or City" required></div>
+                                    <input id="town_city" name="town_city" type="text" class="inp" placeholder="Town or City" value="{{ old('town_city') }}" required></div>
                                 <div class="fl"><label class="lbl" for="province">Province <span class="req">*</span></label>
-                                    <input id="province" name="province" type="text" class="inp" placeholder="Province" required></div>
+                                    <input id="province" name="province" type="text" class="inp" placeholder="Province" value="{{ old('province') }}" required></div>
                             </div>
                         </div>
                     </div>
@@ -376,7 +409,7 @@
                             <p class="text-xs font-bold text-slate-700">Click to Upload Photo</p>
                             <p class="text-xs text-slate-400 leading-relaxed text-center">2×2 colored · White background</p>
                         </div>
-                        <input id="photo_upload" name="photo" type="file" accept="image/*" class="sr-only">
+                        <input id="photo_upload" name="photo" type="file" accept="image/*" class="sr-only" required>
                     </label>
                     <div class="rounded-xl p-3" style="background:rgba(128,0,0,.03);border:1px solid rgba(128,0,0,.1);">
                         <p class="text-xs font-bold mb-1" style="color:#800000;">Photo Requirements</p>
@@ -491,15 +524,15 @@
                 </div>
                 <div class="grid grid-cols-2 gap-3 mb-3">
                     <div class="fl"><label class="lbl" for="emer_name">Contact Person <span class="req">*</span></label>
-                        <input id="emer_name" name="emergency_name" type="text" class="inp" placeholder="Last Name, First Name" required></div>
+                        <input id="emer_name" name="emergency_name" type="text" class="inp" placeholder="Last Name, First Name" value="{{ old('emergency_name', Auth::user()->emergency_name ?? '') }}" required></div>
                     <div class="fl"><label class="lbl" for="emer_rel">Relationship <span class="req">*</span></label>
-                        <input id="emer_rel" name="emergency_relationship" type="text" class="inp" placeholder="e.g. Parent, Sibling, Guardian" required></div>
+                        <input id="emer_rel" name="emergency_relationship" type="text" class="inp" placeholder="e.g. Parent, Sibling, Guardian" value="{{ old('emergency_relationship', Auth::user()->emergency_relationship ?? '') }}" required></div>
                 </div>
                 <div class="grid grid-cols-2 gap-3">
                     <div class="fl"><label class="lbl" for="emer_addr">Address</label>
-                        <input id="emer_addr" name="emergency_address" type="text" class="inp" placeholder="Street, Barangay, Town, Province"></div>
+                        <input id="emer_addr" name="emergency_address" type="text" class="inp" placeholder="Street, Barangay, Town, Province" value="{{ old('emergency_address') }}"></div>
                     <div class="fl"><label class="lbl" for="emer_tel">Tel / CP No. <span class="req">*</span></label>
-                        <input id="emer_tel" name="emergency_contact" type="text" class="inp" placeholder="09XX-XXX-XXXX" required></div>
+                        <input id="emer_tel" name="emergency_contact" type="text" class="inp" placeholder="09XX-XXX-XXXX" value="{{ old('emergency_contact', Auth::user()->emergency_contact ?? '') }}" required></div>
                 </div>
             </div>
 
@@ -538,15 +571,15 @@
             </div>
 
             <div class="fl"><label class="lbl" for="home_address">Home Address <span class="req">*</span></label>
-                <input id="home_address" name="home_address" type="text" class="inp" placeholder="Complete home address" required></div>
+                <input id="home_address" name="home_address" type="text" class="inp" placeholder="Complete home address" value="{{ old('home_address', Auth::user()->address ?? '') }}" required></div>
 
             <div class="grid grid-cols-3 gap-3">
                 <div class="fl"><label class="lbl" for="tel_nr">Tel No.</label>
-                    <input id="tel_nr" name="tel_nr" type="text" class="inp" placeholder="(02) XXX-XXXX"></div>
+                    <input id="tel_nr" name="tel_nr" type="text" class="inp" placeholder="(02) XXX-XXXX" value="{{ old('tel_nr') }}"></div>
                 <div class="fl"><label class="lbl" for="cp_nr">Cellphone No. <span class="req">*</span></label>
-                    <input id="cp_nr" name="cp_nr" type="text" class="inp" placeholder="09XX-XXX-XXXX" required></div>
+                    <input id="cp_nr" name="cp_nr" type="text" class="inp" placeholder="09XX-XXX-XXXX" value="{{ old('cp_nr', Auth::user()->contact_number ?? '') }}" required></div>
                 <div class="fl"><label class="lbl" for="email">Email Address <span class="req">*</span></label>
-                    <input id="email" name="email" type="email" class="inp" placeholder="you@example.com" required></div>
+                    <input id="email" name="email" type="email" class="inp" placeholder="you@example.com" value="{{ old('email', Auth::user()->email ?? '') }}" required></div>
             </div>
 
             <hr class="divider">
@@ -556,7 +589,7 @@
                     <p class="lbl mb-2">Gender <span class="req">*</span></p>
                     <div class="pill-group">
                         @foreach (['Male','Female'] as $g)
-                        <label class="pill-opt"><input type="radio" name="rids_gender" value="{{ $g }}" required><span>{{ $g }}</span></label>
+                        <label class="pill-opt"><input type="radio" name="rids_gender" value="{{ $g }}" {{ old('rids_gender', Auth::user()->gender ?? '') === $g ? 'checked' : '' }} required><span>{{ $g }}</span></label>
                         @endforeach
                     </div>
                 </div>
@@ -564,38 +597,44 @@
                     <p class="lbl mb-2">Marital Status <span class="req">*</span></p>
                     <div class="pill-group">
                         @foreach (['Single','Married','Widow','Widower'] as $ms)
-                        <label class="pill-opt"><input type="radio" name="marital_status" value="{{ $ms }}" required><span>{{ $ms }}</span></label>
+                        <label class="pill-opt"><input type="radio" name="marital_status" value="{{ $ms }}" {{ old('marital_status', 'Single') === $ms ? 'checked' : '' }} required><span>{{ $ms }}</span></label>
                         @endforeach
                     </div>
                 </div>
             </div>
 
+            @php
+                $userDob = Auth::user()->date_of_birth;
+                $dobDay = old('rids_dob_day', $userDob ? $userDob->format('j') : '');
+                $dobMonth = old('rids_dob_month', $userDob ? $userDob->format('n') : '');
+                $dobYear = old('rids_dob_year', $userDob ? $userDob->format('Y') : '');
+            @endphp
             <div class="grid grid-cols-2 gap-3">
                 <div>
                     <p class="lbl mb-2">Date of Birth <span class="req">*</span></p>
                     <div class="grid grid-cols-3 gap-2">
                         <div class="fl"><label class="lbl" for="rids_day">Day</label>
-                            <input id="rids_day" name="rids_dob_day" type="number" min="1" max="31" class="inp" placeholder="DD"></div>
+                            <input id="rids_day" name="rids_dob_day" type="number" min="1" max="31" class="inp" placeholder="DD" value="{{ $dobDay }}"></div>
                         <div class="fl"><label class="lbl" for="rids_month">Month</label>
                             <select id="rids_month" name="rids_dob_month" class="inp">
-                                <option value="" disabled selected>Month</option>
+                                <option value="" disabled {{ !$dobMonth ? 'selected' : '' }}>Month</option>
                                 @php $months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']; @endphp
-                                @foreach($months as $i=>$m)<option value="{{ $i+1 }}">{{ $m }}</option>@endforeach
+                                @foreach($months as $i=>$m)<option value="{{ $i+1 }}" {{ (int)$dobMonth === ($i+1) ? 'selected' : '' }}>{{ $m }}</option>@endforeach
                             </select>
                         </div>
                         <div class="fl"><label class="lbl" for="rids_year">Year</label>
-                            <input id="rids_year" name="rids_dob_year" type="number" min="1970" max="{{ date('Y')-15 }}" class="inp" placeholder="YYYY"></div>
+                            <input id="rids_year" name="rids_dob_year" type="number" min="1970" max="{{ date('Y')-15 }}" class="inp" placeholder="YYYY" value="{{ $dobYear }}"></div>
                     </div>
                 </div>
                 <div class="fl"><label class="lbl" for="place_of_birth">Place of Birth <span class="req">*</span></label>
-                    <input id="place_of_birth" name="place_of_birth" type="text" class="inp" placeholder="City/Municipality, Province" required></div>
+                    <input id="place_of_birth" name="place_of_birth" type="text" class="inp" placeholder="City/Municipality, Province" value="{{ old('place_of_birth') }}" required></div>
             </div>
 
             <div class="grid grid-cols-2 gap-3">
                 <div class="fl"><label class="lbl" for="rids_religion">Religion</label>
-                    <input id="rids_religion" name="rids_religion" type="text" class="inp" placeholder="e.g. Roman Catholic"></div>
+                    <input id="rids_religion" name="rids_religion" type="text" class="inp" placeholder="e.g. Roman Catholic" value="{{ old('rids_religion', Auth::user()->religion ?? '') }}"></div>
                 <div class="fl"><label class="lbl" for="dialect">Dialect</label>
-                    <input id="dialect" name="dialect" type="text" class="inp" placeholder="e.g. Ilocano, Tagalog"></div>
+                    <input id="dialect" name="dialect" type="text" class="inp" placeholder="e.g. Ilocano, Tagalog" value="{{ old('dialect') }}"></div>
             </div>
 
         </div>
@@ -942,11 +981,11 @@
             <div class="grid sm:grid-cols-2 gap-4">
 
                 @php $attachments = [
-                    ['id'=>'att_assessment',   'name'=>'file_assessment',    'label'=>'Assessment Form',           'note'=>'Issued by the CSU Registrar',                         'req'=>true,  'color'=>'#800000',  'bg'=>'rgba(128,0,0,.05)',  'border'=>'rgba(128,0,0,.2)'],
-                    ['id'=>'att_medical',      'name'=>'file_medical',       'label'=>'Medical Certificate',       'note'=>'From the campus clinic or accredited hospital',        'req'=>true,  'color'=>'#1d4ed8',  'bg'=>'rgba(29,78,216,.05)','border'=>'rgba(29,78,216,.2)'],
-                    ['id'=>'att_consent',      'name'=>'file_consent',       'label'=>'Parental Consent / Waiver', 'note'=>'Signed parent or guardian consent form',               'req'=>true,  'color'=>'#be185d',  'bg'=>'rgba(190,24,93,.05)','border'=>'rgba(190,24,93,.2)'],
-                    ['id'=>'att_photos',       'name'=>'file_id_photos',     'label'=>'2×2 ID Photos',             'note'=>'Colored, white background, military haircut (male)',   'req'=>true,  'color'=>'#047857',  'bg'=>'rgba(4,120,87,.05)', 'border'=>'rgba(4,120,87,.2)'],
-                    ['id'=>'att_school_id',    'name'=>'file_school_id',     'label'=>'School ID',                 'note'=>'Current semester school ID — both sides',              'req'=>true,  'color'=>'#92400e',  'bg'=>'rgba(146,64,14,.05)','border'=>'rgba(251,191,36,.2)'],
+
+                    ['id'=>'att_birth_cert',   'name'=>'birth_certificate_path', 'label'=>'Birth Certificate',         'note'=>'Original or notarized copy',                          'req'=>true,  'color'=>'#be185d',  'bg'=>'rgba(190,24,93,.05)','border'=>'rgba(190,24,93,.2)'],
+                    ['id'=>'att_medical',      'name'=>'medical_path',           'label'=>'Medical Certificate',       'note'=>'From the campus clinic or accredited hospital',       'req'=>true,  'color'=>'#1d4ed8',  'bg'=>'rgba(29,78,216,.05)','border'=>'rgba(29,78,216,.2)'],
+                    ['id'=>'att_parent_id',    'name'=>'parent_id_path',         'label'=>'Parent/Guardian ID',        'note'=>'Clear copy of valid ID with signature',               'req'=>true,  'color'=>'#047857',  'bg'=>'rgba(4,120,87,.05)', 'border'=>'rgba(4,120,87,.2)'],
+                    ['id'=>'att_parent_consent', 'name'=>'parent_consent_path',  'label'=>'Parent Consent Form',       'note'=>'Signed consent form from the ROTC office',            'req'=>true,  'color'=>'#800000',  'bg'=>'rgba(128,0,0,.05)',  'border'=>'rgba(128,0,0,.2)'],
                 ]; @endphp
 
                 @foreach ($attachments as $att)
@@ -1043,9 +1082,12 @@
                             <div><span class="rv-lbl">Date of Birth</span><span class="rv-val rv-empty" id="rv-dob">—</span></div>
                             <div><span class="rv-lbl">Age</span><span class="rv-val rv-empty" id="rv-age">—</span></div>
                             <div><span class="rv-lbl">Gender</span><span class="rv-val rv-empty" id="rv-gender">—</span></div>
+                            <div><span class="rv-lbl">College</span><span class="rv-val rv-empty" id="rv-college">—</span></div>
+                            <div><span class="rv-lbl">Department</span><span class="rv-val rv-empty" id="rv-department">—</span></div>
                             <div><span class="rv-lbl">Course / Year</span><span class="rv-val rv-empty" id="rv-course">—</span></div>
                             <div><span class="rv-lbl">Religion</span><span class="rv-val rv-empty" id="rv-religion">—</span></div>
                             <div><span class="rv-lbl">Blood Type</span><span class="rv-val rv-empty" id="rv-blood_type">—</span></div>
+                            <div style="grid-column: span 3;"><span class="rv-lbl">Existing Medical Conditions</span><span class="rv-val rv-empty" id="rv-existing_medical_conditions">—</span></div>
                         </div>
                     </div>
                     <div class="rv-section mb-0">
@@ -1407,6 +1449,107 @@
 <script>
 var currentStep = 1;
 var totalSteps  = 6;
+var toastTimer  = null;
+
+function showValidationToast(msg) {
+    var toast = document.getElementById('validation-toast');
+    var toastMsg = document.getElementById('validation-toast-msg');
+    if (!toast) return;
+    if (toastMsg) toastMsg.textContent = msg;
+    toast.classList.remove('hidden', 'translate-y-2', 'opacity-0');
+    toast.classList.add('translate-y-0', 'opacity-100');
+    if (toastTimer) clearTimeout(toastTimer);
+    toastTimer = setTimeout(function() {
+        toast.classList.remove('translate-y-0', 'opacity-100');
+        toast.classList.add('translate-y-2', 'opacity-0');
+        setTimeout(function() { toast.classList.add('hidden'); }, 300);
+    }, 4500);
+}
+
+function validateStep(stepNum) {
+    var stepEl = document.getElementById('step-' + stepNum);
+    if (!stepEl) return true;
+
+    stepEl.querySelectorAll('.is-invalid-step').forEach(function(el) {
+        el.classList.remove('is-invalid-step');
+    });
+
+    var isValid = true;
+    var firstInvalidEl = null;
+
+    // 1. Standard text/select/textarea inputs with [required]
+    var requiredInputs = stepEl.querySelectorAll('input[required]:not([type="radio"]):not([type="checkbox"]):not([type="file"]), select[required], textarea[required]');
+    requiredInputs.forEach(function(input) {
+        if (!input.value || !input.value.trim()) {
+            isValid = false;
+            input.classList.add('is-invalid-step');
+            if (!firstInvalidEl) firstInvalidEl = input;
+        }
+    });
+
+    // 2. Required file inputs
+    var requiredFiles = stepEl.querySelectorAll('input[type="file"][required]');
+    requiredFiles.forEach(function(fileInput) {
+        var id = fileInput.id;
+        var hasFile = fileInput.files && fileInput.files.length > 0;
+        var hasPreview = false;
+        
+        if (id === 'photo_upload') {
+            var wrap = document.getElementById('photo-preview-wrap');
+            hasPreview = wrap && !wrap.classList.contains('hidden');
+        } else if (id.startsWith('att_')) {
+            var done = document.getElementById('done-' + id);
+            hasPreview = done && !done.classList.contains('hidden');
+        } else {
+            var pWrap = document.getElementById('preview-wrap-' + id);
+            hasPreview = pWrap && !pWrap.classList.contains('hidden');
+        }
+
+        if (!hasFile && !hasPreview) {
+            isValid = false;
+            var zone = document.getElementById('zone-' + id) || fileInput.closest('label') || fileInput;
+            if (zone) zone.classList.add('is-invalid-step');
+            if (!firstInvalidEl) firstInvalidEl = fileInput;
+        }
+    });
+
+    // 3. Required radio button groups
+    var requiredRadios = stepEl.querySelectorAll('input[type="radio"][required]');
+    var checkedRadioNames = new Set();
+    requiredRadios.forEach(function(radio) {
+        if (checkedRadioNames.has(radio.name)) return;
+        var checked = stepEl.querySelector('input[name="' + radio.name + '"]:checked');
+        if (!checked) {
+            isValid = false;
+            var pillGroup = radio.closest('.pill-group') || radio.parentElement;
+            if (pillGroup) pillGroup.classList.add('is-invalid-step');
+            if (!firstInvalidEl) firstInvalidEl = radio;
+        }
+        checkedRadioNames.add(radio.name);
+    });
+
+    // 4. Required checkboxes
+    var requiredCheckboxes = stepEl.querySelectorAll('input[type="checkbox"][required]');
+    requiredCheckboxes.forEach(function(cb) {
+        if (!cb.checked) {
+            isValid = false;
+            var parent = cb.closest('.confirm-wrap') || cb;
+            if (parent) parent.classList.add('is-invalid-step');
+            if (!firstInvalidEl) firstInvalidEl = cb;
+        }
+    });
+
+    if (!isValid) {
+        if (firstInvalidEl) {
+            if (typeof firstInvalidEl.focus === 'function') firstInvalidEl.focus();
+            var targetScroll = firstInvalidEl.closest('.fl, .flex-col, .form-card, div') || firstInvalidEl;
+            targetScroll.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+        showValidationToast('Please fill up all required fields (*) in this step before proceeding.');
+    }
+
+    return isValid;
+}
 
 function showStep(n) {
     document.querySelectorAll('.form-step').forEach(function(el) { el.classList.remove('active'); });
@@ -1463,9 +1606,54 @@ function syncSidebar(n) {
     }
 }
 
+function syncRidsForm() {
+    // Address
+    var street = (document.getElementById('street').value || '').trim();
+    var brgy = (document.getElementById('barangay').value || '').trim();
+    var town = (document.getElementById('town_city').value || '').trim();
+    var prov = (document.getElementById('province').value || '').trim();
+    var fullAddress = [street, brgy, town, prov].filter(Boolean).join(', ');
+    if (fullAddress && !document.getElementById('home_address').value) {
+        document.getElementById('home_address').value = fullAddress;
+    }
+
+    // Gender
+    var gender = document.getElementById('gender').value;
+    if (gender) {
+        var ridsGenders = document.querySelectorAll('input[name="rids_gender"]');
+        ridsGenders.forEach(function(r) { if (r.value === gender) r.checked = true; });
+    }
+
+    // DOB
+    var dob = document.getElementById('dob').value;
+    if (dob) {
+        var parts = dob.split('-');
+        if (parts.length === 3) {
+            document.getElementById('rids_year').value = parts[0];
+            document.getElementById('rids_month').value = parseInt(parts[1], 10);
+            document.getElementById('rids_day').value = parseInt(parts[2], 10);
+        }
+    }
+
+    // Religion
+    var religion = document.getElementById('religion').value;
+    if (religion && !document.getElementById('rids_religion').value) {
+        document.getElementById('rids_religion').value = religion;
+    }
+
+    // Blood Type
+    var bloodType = document.getElementById('blood_type').value;
+    if (bloodType) {
+        var ridsBTs = document.querySelectorAll('input[name="rids_blood_type[]"]');
+        ridsBTs.forEach(function(r) { if (r.value === bloodType) r.checked = true; });
+    }
+}
+
 function nextStep() {
+    if (!validateStep(currentStep)) return;
     if (currentStep < totalSteps) {
         currentStep++;
+        if (currentStep === 3) syncRidsForm();
         if (currentStep === totalSteps) populateReview();
         showStep(currentStep);
     } else {
@@ -1473,9 +1661,40 @@ function nextStep() {
     }
 }
 
+function goToStep(n) {
+    if (n === currentStep) return;
+    if (n < currentStep) {
+        currentStep = n;
+        if (currentStep === 3) syncRidsForm();
+        showStep(currentStep);
+        return;
+    }
+    for (var s = currentStep; s < n; s++) {
+        if (!validateStep(s)) return;
+    }
+    currentStep = n;
+    if (currentStep === 3) syncRidsForm();
+    if (currentStep === totalSteps) populateReview();
+    showStep(currentStep);
+}
+
 function prevStep() {
     if (currentStep > 1) { currentStep--; showStep(currentStep); }
 }
+
+// Clear error styling on input or change
+document.addEventListener('input', function(e) {
+    if (!e.target) return;
+    if (e.target.classList.contains('is-invalid-step')) e.target.classList.remove('is-invalid-step');
+    var p = e.target.closest('.is-invalid-step');
+    if (p) p.classList.remove('is-invalid-step');
+});
+document.addEventListener('change', function(e) {
+    if (!e.target) return;
+    if (e.target.classList.contains('is-invalid-step')) e.target.classList.remove('is-invalid-step');
+    var p = e.target.closest('.is-invalid-step');
+    if (p) p.classList.remove('is-invalid-step');
+});
 
 function rv(id) {
     var el = document.getElementById(id);
@@ -1502,7 +1721,10 @@ function populateReview() {
     setRv('dob',        rv('dob'));
     setRv('age',        rv('age') ? rv('age') + ' yrs' : '');
     setRv('gender',     rv('gender'));
+    setRv('college',    rv('college'));
+    setRv('department', rv('department'));
     setRv('course',     rv('course'));
+    setRv('existing_medical_conditions', rv('existing_medical_conditions'));
     setRv('religion',   rv('religion'));
     setRv('blood_type', rv('blood_type'));
     setRv('street',     rv('street'));
@@ -1511,11 +1733,14 @@ function populateReview() {
     setRv('province',   rv('province'));
 
     // Photo
-    var photoSrc = document.getElementById('photo-preview').src;
-    if (photoSrc && photoSrc !== window.location.href && photoSrc !== '#') {
-        document.getElementById('rv-photo').src = photoSrc;
+    if (!document.getElementById('photo-preview-wrap').classList.contains('hidden')) {
+        document.getElementById('rv-photo').src = document.getElementById('photo-preview').src;
         document.getElementById('rv-photo-wrap').classList.remove('hidden');
         document.getElementById('rv-photo-placeholder').classList.add('hidden');
+    } else {
+        document.getElementById('rv-photo').src = "#";
+        document.getElementById('rv-photo-wrap').classList.add('hidden');
+        document.getElementById('rv-photo-placeholder').classList.remove('hidden');
     }
 
     // Family
@@ -1558,11 +1783,10 @@ function populateReview() {
 
     // Attachments
     var attDefs = [
-        { id:'att_assessment', label:'Assessment Form' },
+        { id:'att_birth_cert', label:'Birth Certificate' },
         { id:'att_medical',    label:'Medical Certificate' },
-        { id:'att_consent',    label:'Parental Consent / Waiver' },
-        { id:'att_photos',     label:'2×2 ID Photos' },
-        { id:'att_school_id',  label:'School ID' },
+        { id:'att_parent_id',  label:'Parent/Guardian ID' },
+        { id:'att_parent_consent', label:'Parent Consent Form' },
     ];
     var container = document.getElementById('rv-attachments');
     container.innerHTML = '';
@@ -1582,17 +1806,158 @@ function populateReview() {
     });
 }
 
-// Photo preview
+// Photo preview & Teachable Machine Validation
 (function () {
+    const URL = "/tm-my-image-model/";
+    let tmModel, maxPredictions;
+
+    // Load the image model asynchronously
+    async function initTM() {
+        const modelURL = URL + "model.json";
+        const metadataURL = URL + "metadata.json";
+
+        try {
+            if (window.tmImage) {
+                tmModel = await tmImage.load(modelURL, metadataURL);
+                maxPredictions = tmModel.getTotalClasses();
+            }
+        } catch (error) {
+            console.error("Failed to load TM model", error);
+        }
+    }
+    
+    window.addEventListener('DOMContentLoaded', initTM);
+
     var input = document.getElementById('photo_upload');
     if (!input) return;
+    
     input.addEventListener('change', function () {
         var file = input.files[0]; if (!file) return;
+        
+        // Mark loading state if desired (optional)
+        document.getElementById('photo-placeholder').style.opacity = '0.5';
+        
         var reader = new FileReader();
         reader.onload = function (e) {
-            document.getElementById('photo-preview').src = e.target.result;
-            document.getElementById('photo-preview-wrap').classList.remove('hidden');
-            document.getElementById('photo-placeholder').classList.add('hidden');
+            var img = new Image();
+            img.onload = async function() {
+                        // FILE SIZE CHECK (Max 5MB)
+                        if (file.size > 5 * 1024 * 1024) {
+                            document.getElementById('validation-toast-msg').textContent = "File size too large. Maximum is 5MB.";
+                            showValidationToast();
+                            
+                            input.value = "";
+                            document.getElementById('photo-preview').src = "#";
+                            document.getElementById('photo-preview-wrap').classList.add('hidden');
+                            document.getElementById('photo-placeholder').classList.remove('hidden');
+                            document.getElementById('photo-placeholder').style.opacity = '1';
+                            
+                            var zone = input.closest('.photo-zone');
+                            if(zone) zone.classList.add('is-invalid-step');
+                            return;
+                        }
+
+                        // ASPECT RATIO CHECK (Must be roughly square 1:1)
+                        let ratio = img.naturalWidth / img.naturalHeight;
+                        if (ratio < 0.7 || ratio > 1.3) {
+                            document.getElementById('validation-toast-msg').textContent = "Image must be a square (2x2 ratio).";
+                            showValidationToast();
+                            
+                            input.value = "";
+                            document.getElementById('photo-preview').src = "#";
+                            document.getElementById('photo-preview-wrap').classList.add('hidden');
+                            document.getElementById('photo-placeholder').classList.remove('hidden');
+                            document.getElementById('photo-placeholder').style.opacity = '1';
+                            
+                            var zone = input.closest('.photo-zone');
+                            if(zone) zone.classList.add('is-invalid-step');
+                            return;
+                        }
+
+                        // WHITE BACKGROUND CHECK
+                        const canvas = document.createElement('canvas');
+                        // Scale down to make it fast
+                        const MAX_SIZE = 100;
+                        let scale = Math.min(MAX_SIZE / img.naturalWidth, MAX_SIZE / img.naturalHeight);
+                        canvas.width = img.naturalWidth * scale;
+                        canvas.height = img.naturalHeight * scale;
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                        
+                        const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+                        let rTotal = 0, gTotal = 0, bTotal = 0, count = 0;
+                        const edgeThick = 5;
+                        
+                        for (let y = 0; y < canvas.height; y++) {
+                            for (let x = 0; x < canvas.width; x++) {
+                                if (x < edgeThick || x > canvas.width - edgeThick || y < edgeThick || y > canvas.height - edgeThick) {
+                                    const idx = (y * canvas.width + x) * 4;
+                                    rTotal += imgData[idx];
+                                    gTotal += imgData[idx+1];
+                                    bTotal += imgData[idx+2];
+                                    count++;
+                                }
+                            }
+                        }
+                        
+                        const avgR = rTotal / count, avgG = gTotal / count, avgB = bTotal / count;
+                        if (avgR < 180 || avgG < 180 || avgB < 180) {
+                            document.getElementById('validation-toast-msg').textContent = "Photo must have a white background.";
+                            showValidationToast();
+                            
+                            input.value = "";
+                            document.getElementById('photo-preview').src = "#";
+                            document.getElementById('photo-preview-wrap').classList.add('hidden');
+                            document.getElementById('photo-placeholder').classList.remove('hidden');
+                            document.getElementById('photo-placeholder').style.opacity = '1';
+                            
+                            var zone = input.closest('.photo-zone');
+                            if(zone) zone.classList.add('is-invalid-step');
+                            return;
+                        }
+
+                if (tmModel) {
+                    try {
+                        const prediction = await tmModel.predict(img);
+                        console.log("TM Predictions:", prediction);
+                        
+                        let highestPred = prediction[0];
+                        for (let i = 1; i < prediction.length; i++) {
+                            if (prediction[i].probability > highestPred.probability) {
+                                highestPred = prediction[i];
+                            }
+                        }
+                        
+                        // ASSUMPTION: Class 1 is "Real Picture". Reject if it is not Class 1.
+                        if (highestPred.className !== "Class 1") {
+                            document.getElementById('validation-toast-msg').textContent = "Invalid picture detected (" + highestPred.className + "). Please upload a real 2x2 student photo.";
+                            showValidationToast();
+                            
+                            input.value = "";
+                            document.getElementById('photo-preview').src = "#";
+                            document.getElementById('photo-preview-wrap').classList.add('hidden');
+                            document.getElementById('photo-placeholder').classList.remove('hidden');
+                            document.getElementById('photo-placeholder').style.opacity = '1';
+                            
+                            var zone = input.closest('.photo-zone');
+                            if(zone) zone.classList.add('is-invalid-step');
+                            return;
+                        }
+                    } catch (err) {
+                        console.error("Error predicting image:", err);
+                    }
+                }
+                
+                // Passed validation or model didn't load (fallback)
+                document.getElementById('photo-preview').src = e.target.result;
+                document.getElementById('photo-preview-wrap').classList.remove('hidden');
+                document.getElementById('photo-placeholder').classList.add('hidden');
+                document.getElementById('photo-placeholder').style.opacity = '1';
+                
+                var zone = input.closest('.photo-zone');
+                if(zone) zone.classList.remove('is-invalid-step');
+            };
+            img.src = e.target.result;
         };
         reader.readAsDataURL(file);
     });
@@ -1604,6 +1969,19 @@ function populateReview() {
     if (!input) return;
     input.addEventListener('change', function () {
         var file = input.files[0]; if (!file) return;
+        
+        if (file.size > 5 * 1024 * 1024) {
+            document.getElementById('validation-toast-msg').textContent = "File size too large. Maximum is 5MB per file.";
+            showValidationToast();
+            input.value = "";
+            document.getElementById('preview-' + id).src = "#";
+            document.getElementById('preview-wrap-' + id).classList.add('hidden');
+            document.getElementById('placeholder-' + id).classList.remove('hidden');
+            var zone = input.closest('.upload-zone, label');
+            if (zone) zone.classList.add('is-invalid-step');
+            return;
+        }
+
         var reader = new FileReader();
         reader.onload = function (e) {
             document.getElementById('preview-' + id).src = e.target.result;
@@ -1619,18 +1997,20 @@ function populateReview() {
     var dob = document.getElementById('dob');
     var age = document.getElementById('age');
     if (!dob || !age) return;
-    dob.addEventListener('change', function () {
+    function calcAge() {
         var d = new Date(dob.value); if (isNaN(d)) return;
         var today = new Date();
         var a = today.getFullYear() - d.getFullYear();
         if (today.getMonth() < d.getMonth() || (today.getMonth() === d.getMonth() && today.getDate() < d.getDate())) a--;
         age.value = a > 0 ? a : '';
-    });
+    }
+    dob.addEventListener('change', calcAge);
+    if (dob.value) calcAge();
 }());
 
 // Attachment file feedback
 (function () {
-    var ids = ['att_assessment','att_medical','att_consent','att_photos','att_school_id'];
+    var ids = ['att_birth_cert','att_medical','att_parent_id','att_parent_consent'];
     ids.forEach(function(id) {
         var input = document.getElementById(id);
         if (!input) return;
@@ -1641,6 +2021,16 @@ function populateReview() {
             var fn   = document.getElementById('fname-' + id);
             var zone = document.getElementById('zone-' + id);
             if (file) {
+                if (file.size > 5 * 1024 * 1024) {
+                    document.getElementById('validation-toast-msg').textContent = "File size too large. Maximum is 5MB per file.";
+                    showValidationToast();
+                    input.value = "";
+                    ph.classList.remove('hidden');
+                    done.classList.add('hidden');
+                    zone.classList.remove('has-file');
+                    zone.classList.add('is-invalid-step');
+                    return;
+                }
                 ph.classList.add('hidden');
                 done.classList.remove('hidden');
                 fn.textContent = file.name.length > 28 ? file.name.substring(0,26)+'...' : file.name;
@@ -1684,5 +2074,17 @@ function populateReview() {
     syncSidebar(1);
 }());
 </script>
+{{-- FLOATING VALIDATION TOAST --}}
+<div id="validation-toast" class="hidden fixed bottom-6 right-6 z-50 flex items-center gap-3 px-5 py-3.5 bg-red-900 text-white text-xs font-bold rounded-xl shadow-2xl transition-all duration-300 transform translate-y-2 opacity-0">
+    <svg class="w-5 h-5 text-red-300 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+    </svg>
+    <span id="validation-toast-msg">Please fill up all required fields (*) in this step before proceeding.</span>
+</div>
+
+<!-- Teachable Machine Scripts -->
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@1.3.1/dist/tf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@0.8/dist/teachablemachine-image.min.js"></script>
+
 </body>
 </html>

@@ -32,6 +32,24 @@
         </svg>
         Grades
     </a>
+    <a href="{{ route('officer.materials.index') }}" class="sidebar-link">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
+        </svg>
+        Lecture Materials
+    </a>
+    <a href="{{ route('officer.exams.index') }}" class="sidebar-link">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/>
+        </svg>
+        Examinations
+    </a>
+    <a href="{{ route('officer.exams.create') }}" class="sidebar-link">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+        </svg>
+        Create Exam
+    </a>
 @endsection
 
 @section('content')
@@ -48,10 +66,10 @@
 <div class="flex flex-wrap gap-3 mb-5">
     @php
         $tabs = [
-            'pending'   => ['label' => 'Pending',   'count' => $counts->pending   ?? 0, 'color' => '#92400e', 'bg' => '#fffbeb', 'border' => '#fde68a'],
-            'validated' => ['label' => 'Validated', 'count' => $counts->validated ?? 0, 'color' => '#14532d', 'bg' => '#f0fdf4', 'border' => '#bbf7d0'],
-            'rejected'  => ['label' => 'Rejected',  'count' => $counts->rejected  ?? 0, 'color' => '#7f1d1d', 'bg' => '#fff5f5', 'border' => '#fecaca'],
-            'all'       => ['label' => 'All',        'count' => $counts->total    ?? 0, 'color' => '#1e3a5f', 'bg' => '#f1f5f9', 'border' => '#cbd5e1'],
+            'pending_review' => ['label' => 'Pending',   'count' => $counts->pending   ?? 0, 'color' => '#92400e', 'bg' => '#fffbeb', 'border' => '#fde68a'],
+            'approved'       => ['label' => 'Validated', 'count' => $counts->approved  ?? 0, 'color' => '#14532d', 'bg' => '#f0fdf4', 'border' => '#bbf7d0'],
+            'rejected'       => ['label' => 'Rejected',  'count' => $counts->rejected  ?? 0, 'color' => '#7f1d1d', 'bg' => '#fff5f5', 'border' => '#fecaca'],
+            'all'            => ['label' => 'All',       'count' => $counts->total     ?? 0, 'color' => '#1e3a5f', 'bg' => '#f1f5f9', 'border' => '#cbd5e1'],
         ];
     @endphp
 
@@ -80,8 +98,8 @@
         <div>
             <h2 class="text-xs font-bold text-slate-700 uppercase tracking-wider">
                 @if ($filter === 'all') All Enrollees
-                @elseif ($filter === 'pending') Pending Validation
-                @elseif ($filter === 'validated') Validated Enrollees
+                @elseif ($filter === 'pending_review') Pending Validation
+                @elseif ($filter === 'approved') Validated Enrollees
                 @else Rejected Enrollees
                 @endif
             </h2>
@@ -108,10 +126,14 @@
                         {{-- Name + avatar --}}
                         <td class="px-5 py-3">
                             <div class="flex items-center gap-2.5">
-                                <div class="w-8 h-8 rounded-full flex items-center justify-center text-xs font-black shrink-0"
-                                     style="background: linear-gradient(135deg, var(--gold3), var(--gold)); color: var(--navy);">
-                                    {{ strtoupper(substr($enrollee->name, 0, 1)) }}
-                                </div>
+                                @if($enrollee->photo_path)
+                                    <img src="{{ Storage::url($enrollee->photo_path) }}" alt="{{ $enrollee->name }}" class="w-8 h-8 rounded-full object-cover shrink-0" style="border: 2px solid var(--gold);">
+                                @else
+                                    <div class="w-8 h-8 rounded-full flex items-center justify-center text-xs font-black shrink-0"
+                                         style="background: linear-gradient(135deg, var(--gold3), var(--gold)); color: var(--navy);">
+                                        {{ strtoupper(substr($enrollee->name, 0, 1)) }}
+                                    </div>
+                                @endif
                                 <div>
                                     <p class="text-sm font-semibold text-slate-900">{{ $enrollee->name }}</p>
                                     <p class="text-xs text-slate-400">{{ $enrollee->email }}</p>
@@ -130,13 +152,13 @@
 
                         {{-- Status badge --}}
                         <td class="px-5 py-3 text-center">
-                            @if ($enrollee->enrollment_status === 'pending')
+                            @if ($enrollee->enrollment_status === 'pending_review')
                                 <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold"
                                       style="background: #fffbeb; color: #92400e; border: 1px solid #fde68a;">
                                     <span class="w-1.5 h-1.5 rounded-full bg-yellow-400 inline-block"></span>
                                     Pending
                                 </span>
-                            @elseif ($enrollee->enrollment_status === 'validated')
+                            @elseif ($enrollee->enrollment_status === 'approved')
                                 <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold"
                                       style="background: #f0fdf4; color: #14532d; border: 1px solid #bbf7d0;">
                                     <span class="w-1.5 h-1.5 rounded-full bg-green-500 inline-block"></span>
@@ -159,28 +181,6 @@
                                    style="background: rgba(200,169,81,0.1); color: #c8a951; border: 1px solid rgba(200,169,81,0.2);">
                                     Review
                                 </a>
-
-                                @if ($enrollee->enrollment_status === 'pending')
-                                    <form method="POST" action="{{ route('officer.enrollments.validate', $enrollee) }}"
-                                          onsubmit="return confirm('Validate enrollment for {{ addslashes($enrollee->name) }}?')">
-                                        @csrf @method('PATCH')
-                                        <button type="submit"
-                                                class="text-xs px-2.5 py-1 rounded font-semibold"
-                                                style="background: #f0fdf4; color: #14532d; border: 1px solid #bbf7d0;">
-                                            Validate
-                                        </button>
-                                    </form>
-
-                                    <form method="POST" action="{{ route('officer.enrollments.reject', $enrollee) }}"
-                                          onsubmit="return confirm('Reject enrollment for {{ addslashes($enrollee->name) }}?')">
-                                        @csrf @method('PATCH')
-                                        <button type="submit"
-                                                class="text-xs px-2.5 py-1 rounded font-semibold"
-                                                style="background: #fff5f5; color: #7f1d1d; border: 1px solid #fecaca;">
-                                            Reject
-                                        </button>
-                                    </form>
-                                @endif
                             </div>
                         </td>
 

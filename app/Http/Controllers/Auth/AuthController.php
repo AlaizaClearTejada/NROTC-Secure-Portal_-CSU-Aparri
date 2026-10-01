@@ -73,9 +73,14 @@ class AuthController extends Controller
 
         // Gate 2 – inactive account
         if (!$user->is_active) {
-            // Cadets who just registered (null) or submitted their form (pending)
+            // Cadets who just registered (null) or submitted their form (pending/medical/revision)
             // may log in so they can complete/view their enrollment application.
-            if ($user->isCadet() && in_array($user->enrollment_status, [null, \App\Models\User::ENROLLMENT_PENDING], true)) {
+            if ($user->isCadet() && in_array($user->enrollment_status, [
+                null, 
+                \App\Models\User::ENROLLMENT_PENDING_REVIEW,
+                \App\Models\User::ENROLLMENT_MEDICAL_REVIEW,
+                \App\Models\User::ENROLLMENT_REVISION_REQUESTED
+            ], true)) {
                 // fall through to credential check
             } elseif ($user->isCadet() && $user->isEnrollmentRejected()) {
                 throw ValidationException::withMessages([

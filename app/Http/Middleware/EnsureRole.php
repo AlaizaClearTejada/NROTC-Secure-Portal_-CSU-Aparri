@@ -34,8 +34,15 @@ class EnsureRole
         // Exception: pending-enrollment cadets are allowed to stay logged in
         // so they can access and submit their enrollment form.
         if (!$user->is_active) {
-            if ($user->isCadet() && in_array($user->enrollment_status, [null, \App\Models\User::ENROLLMENT_PENDING], true)) {
-                return redirect()->route('enroll.form');
+            if ($user->isCadet() && in_array($user->enrollment_status, [
+                null, 
+                \App\Models\User::ENROLLMENT_PENDING_REVIEW,
+                \App\Models\User::ENROLLMENT_MEDICAL_REVIEW,
+                \App\Models\User::ENROLLMENT_REVISION_REQUESTED
+            ], true)) {
+                return $user->enrollment_status === null 
+                    ? redirect()->route('enroll.form') 
+                    : redirect()->route('cadet.applicant.dashboard');
             }
 
             Auth::logout();
