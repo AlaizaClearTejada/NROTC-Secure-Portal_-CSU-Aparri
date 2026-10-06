@@ -1,14 +1,8 @@
 <x-guest-layout>
 
-    @if (session('status') === 'verification-code-sent')
+    @if (session('status'))
         <div class="auth-alert auth-alert-success" role="status">
-            A new OTP has been sent to your email.
-        </div>
-    @endif
-
-    @if ($sendFailed)
-        <div class="auth-alert auth-alert-error" role="alert">
-            We could not send the OTP. Please use "Resend OTP" below in a moment.
+            {{ session('status') }}
         </div>
     @endif
 
@@ -19,14 +13,14 @@
     @endif
 
     <div class="text-center mb-6">
-        <h2 class="text-xl font-bold text-slate-800">Verify your email</h2>
+        <h2 class="text-xl font-bold text-slate-800">Enter OTP</h2>
         <p class="text-sm text-slate-500 mt-2">
-            Enter the 6-digit OTP we sent to <span class="font-semibold text-slate-700">{{ $email }}</span>.
+            Enter the 6-digit OTP sent to <span class="font-semibold text-slate-700">{{ $email }}</span>.
             The OTP expires in 10 minutes.
         </p>
     </div>
 
-    <form method="POST" action="{{ route('verification.verify') }}" id="verifyForm" novalidate>
+    <form method="POST" action="{{ route('password.otp.verify') }}" id="resetCodeForm" novalidate>
         @csrf
 
         <div style="margin-bottom: 1.25rem;">
@@ -39,23 +33,18 @@
                    autofocus required>
         </div>
 
-        <button type="submit" class="auth-submit">Verify Email</button>
+        <button type="submit" class="auth-submit">Continue</button>
     </form>
 
     <div style="margin-top: 1.25rem; text-align: center;">
-        <form method="POST" action="{{ route('verification.send') }}" style="display:inline;">
+        <form method="POST" action="{{ route('password.otp.resend') }}" style="display:inline;">
             @csrf
             <button type="submit" class="auth-forgot" style="font-size: .8rem; background:none; border:none; cursor:pointer;">
                 Resend OTP
             </button>
         </form>
         <span style="color:#cbd5e1; margin: 0 .5rem;">|</span>
-        <form method="POST" action="{{ route('logout') }}" style="display:inline;">
-            @csrf
-            <button type="submit" class="auth-forgot" style="font-size: .8rem; background:none; border:none; cursor:pointer;">
-                Log out
-            </button>
-        </form>
+        <a href="{{ route('password.request') }}" class="auth-forgot" style="font-size: .8rem;">Use a different email</a>
     </div>
 
 </x-guest-layout>

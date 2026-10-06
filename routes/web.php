@@ -4,20 +4,20 @@ use App\Http\Controllers\Admin\AnnouncementController as AdminAnnouncementContro
 use App\Http\Controllers\Admin\AttendanceController as AdminAttendanceController;
 use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
 use App\Http\Controllers\Admin\EnrollmentController as AdminEnrollmentController;
+use App\Http\Controllers\Admin\ExamController as AdminExamController;
 use App\Http\Controllers\Admin\PhotoController as AdminPhotoController;
 use App\Http\Controllers\Cadet\AnnouncementController as CadetAnnouncementController;
 use App\Http\Controllers\Cadet\AttendanceController as CadetAttendanceController;
 use App\Http\Controllers\Cadet\DashboardController as CadetDashboardController;
 use App\Http\Controllers\Cadet\EnrollmentController as CadetEnrollmentController;
+use App\Http\Controllers\Cadet\ExamController as CadetExamController;
+use App\Http\Controllers\Cadet\LectureMaterialController as CadetLectureMaterialController;
 use App\Http\Controllers\Cadet\PhotoController as CadetPhotoController;
 use App\Http\Controllers\Officer\AttendanceController as OfficerAttendanceController;
-use App\Http\Controllers\Officer\DashboardController as OfficerDashboardController;
 use App\Http\Controllers\Officer\CadetController as OfficerCadetController;
-use App\Http\Controllers\Officer\LectureMaterialController as OfficerLectureMaterialController;
+use App\Http\Controllers\Officer\DashboardController as OfficerDashboardController;
 use App\Http\Controllers\Officer\ExamController as OfficerExamController;
-use App\Http\Controllers\Admin\ExamController as AdminExamController;
-use App\Http\Controllers\Cadet\LectureMaterialController as CadetLectureMaterialController;
-use App\Http\Controllers\Cadet\ExamController as CadetExamController;
+use App\Http\Controllers\Officer\LectureMaterialController as OfficerLectureMaterialController;
 use App\Http\Controllers\ProfileController;
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
@@ -53,9 +53,9 @@ Route::middleware(['auth', 'verified', 'session.timeout', 'role:admin'])
         Route::get('dashboard', [AdminDashboardController::class, 'index'])->name('dashboard');
         Route::get('users/create', [AdminDashboardController::class, 'createUser'])->name('users.create');
         Route::post('users', [AdminDashboardController::class, 'storeUser'])->name('users.store');
-        Route::get('users/{user}/unlock', fn() => redirect()->route('admin.dashboard'));
+        Route::get('users/{user}/unlock', fn () => redirect()->route('admin.dashboard'));
         Route::post('users/{user}/unlock', [AdminDashboardController::class, 'unlockAccount'])->name('users.unlock');
-        Route::get('users/{user}/toggle', fn() => redirect()->route('admin.dashboard'));
+        Route::get('users/{user}/toggle', fn () => redirect()->route('admin.dashboard'));
         Route::post('users/{user}/toggle', [AdminDashboardController::class, 'toggleActive'])->name('users.toggle');
         // Enrollments
         Route::get('enrollments', [AdminEnrollmentController::class, 'index'])->name('enrollments.index');
@@ -79,7 +79,7 @@ Route::middleware(['auth', 'verified', 'session.timeout', 'role:admin'])
         // Photo management
         Route::post('users/{user}/photo', [AdminPhotoController::class, 'store'])->name('users.photo.store');
         Route::delete('users/{user}/photo', [AdminPhotoController::class, 'destroy'])->name('users.photo.destroy');
-        
+
         // Examinations
         Route::resource('exams', AdminExamController::class);
         Route::post('exams/{exam}/questions', [AdminExamController::class, 'storeQuestion'])->name('exams.questions.store');
@@ -102,10 +102,10 @@ Route::middleware(['auth', 'verified', 'session.timeout', 'role:officer'])
         // Enrolled Cadets
         Route::get('cadets', [OfficerCadetController::class, 'index'])->name('cadets.index');
         Route::get('cadets/{user}', [OfficerCadetController::class, 'show'])->name('cadets.show');
-        
+
         // Lecture Materials
         Route::resource('materials', OfficerLectureMaterialController::class)->except(['show']);
-        
+
         // Examinations
         Route::resource('exams', OfficerExamController::class);
         Route::post('exams/{exam}/questions', [OfficerExamController::class, 'storeQuestion'])->name('exams.questions.store');
@@ -126,10 +126,10 @@ Route::middleware(['auth', 'verified', 'session.timeout', 'role:cadet'])
         Route::post('profile/photo', [CadetPhotoController::class, 'store'])->name('profile.photo.store');
         Route::get('announcements', [CadetAnnouncementController::class, 'index'])->name('announcements');
         Route::get('attendance', [CadetAttendanceController::class, 'index'])->name('attendance');
-        
+
         // Lecture Materials
         Route::get('materials', [CadetLectureMaterialController::class, 'index'])->name('materials.index');
-        
+
         // Examinations
         Route::get('exams', [CadetExamController::class, 'index'])->name('exams.index');
         Route::get('exams/{exam}', [CadetExamController::class, 'show'])->name('exams.show');

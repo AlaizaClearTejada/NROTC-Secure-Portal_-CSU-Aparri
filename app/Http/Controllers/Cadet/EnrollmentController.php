@@ -4,9 +4,9 @@ namespace App\Http\Controllers\Cadet;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Storage;
 
 class EnrollmentController extends Controller
 {
@@ -15,7 +15,13 @@ class EnrollmentController extends Controller
      */
     public function showForm()
     {
+        /** @var User $user */
         $user = Auth::user();
+
+        if (! $user->canSubmitEnrollment()) {
+            return $this->enrollmentClosed($user);
+        }
+
         return view('enroll-form', compact('user'));
     }
 
@@ -27,20 +33,24 @@ class EnrollmentController extends Controller
         /** @var User $user */
         $user = Auth::user();
 
+        if (! $user->canSubmitEnrollment()) {
+            return $this->enrollmentClosed($user);
+        }
+
         if ($user) {
             $request->validate([
-                'photo'                  => $user->photo_path ? 'nullable|image|mimes:jpeg,png,jpg,webp|max:5120' : 'required|image|mimes:jpeg,png,jpg,webp|max:5120',
-                'diploma_path'           => 'nullable|file|mimes:pdf,jpeg,png,jpg,webp|max:5120',
+                'photo' => $user->photo_path ? 'nullable|image|mimes:jpeg,png,jpg,webp|max:5120' : 'required|image|mimes:jpeg,png,jpg,webp|max:5120',
+                'diploma_path' => 'nullable|file|mimes:pdf,jpeg,png,jpg,webp|max:5120',
                 'birth_certificate_path' => 'nullable|file|mimes:pdf,jpeg,png,jpg,webp|max:5120',
-                'medical_path'           => 'nullable|file|mimes:pdf,jpeg,png,jpg,webp|max:5120',
-                'parent_id_path'         => 'nullable|file|mimes:pdf,jpeg,png,jpg,webp|max:5120',
-                'parent_consent_path'    => 'nullable|file|mimes:pdf,jpeg,png,jpg,webp|max:5120',
-                'date_of_birth'          => 'required|date',
-                'place_of_birth'         => 'required|string',
-                'gender'                 => 'required|in:Male,Female',
-                'course_year'            => 'required|string',
-                'college'                => 'required|string',
-                'department'             => 'required|string',
+                'medical_path' => 'nullable|file|mimes:pdf,jpeg,png,jpg,webp|max:5120',
+                'parent_id_path' => 'nullable|file|mimes:pdf,jpeg,png,jpg,webp|max:5120',
+                'parent_consent_path' => 'nullable|file|mimes:pdf,jpeg,png,jpg,webp|max:5120',
+                'date_of_birth' => 'required|date',
+                'place_of_birth' => 'required|string',
+                'gender' => 'required|in:Male,Female',
+                'course_year' => 'required|string',
+                'college' => 'required|string',
+                'department' => 'required|string',
             ]);
 
             $address = collect([
@@ -59,33 +69,45 @@ class EnrollmentController extends Controller
             $parentConsentPath = $request->hasFile('parent_consent_path') && $request->file('parent_consent_path')->isValid() ? $request->file('parent_consent_path')->store('documents', 'public') : $user->parent_consent_path;
 
             $user->update([
-                'date_of_birth'          => $request->date_of_birth,
-                'gender'                 => $request->gender,
-                'blood_type'             => $request->blood_type,
-                'religion'               => $request->religion,
-                'contact_number'         => $request->cp_nr ?? $request->contact_number,
-                'course_year'            => $request->course_year,
-                'college'                => $request->college,
-                'department'             => $request->department,
-                'place_of_birth'         => $request->place_of_birth,
+                'date_of_birth' => $request->date_of_birth,
+                'gender' => $request->gender,
+                'blood_type' => $request->blood_type,
+                'religion' => $request->religion,
+                'contact_number' => $request->cp_nr ?? $request->contact_number,
+                'course_year' => $request->course_year,
+                'college' => $request->college,
+                'department' => $request->department,
+                'place_of_birth' => $request->place_of_birth,
                 'existing_medical_conditions' => $request->existing_medical_conditions,
-                'address'                => $address ?: $request->address,
-                'height'                 => $request->height,
-                'weight'                 => $request->weight,
-                'emergency_name'         => $request->emergency_name,
+                'address' => $address ?: $request->address,
+                'height' => $request->height,
+                'weight' => $request->weight,
+                'emergency_name' => $request->emergency_name,
                 'emergency_relationship' => $request->emergency_relationship,
-                'emergency_contact'      => $request->emergency_contact,
-                'enrollment_status'      => User::ENROLLMENT_PENDING_REVIEW,
-                'photo_path'             => $photoPath,
-                'diploma_path'           => $diplomaPath,
+                'emergency_contact' => $request->emergency_contact,
+                'enrollment_status' => User::ENROLLMENT_PENDING_REVIEW,
+                'photo_path' => $photoPath,
+                'diploma_path' => $diplomaPath,
                 'birth_certificate_path' => $birthCertificatePath,
-                'medical_path'           => $medicalPath,
-                'parent_id_path'         => $parentIdPath,
-                'parent_consent_path'    => $parentConsentPath,
+                'medical_path' => $medicalPath,
+                'parent_id_path' => $parentIdPath,
+                'parent_consent_path' => $parentConsentPath,
             ]);
         }
 
         return redirect()->route('cadet.applicant.dashboard')->with('success', 'Your application has been submitted and is pending review.');
+    }
+
+    /**
+     * Send users who may not (re)submit the form back to their dashboard.
+     */
+    private function enrollmentClosed(User $user): RedirectResponse
+    {
+        $message = $user->isEnrollmentApproved()
+            ? 'Your enrollment has already been approved. The enrollment form can no longer be resubmitted.'
+            : 'The enrollment form is only for cadet applicants.';
+
+        return redirect($user->dashboardRoute())->with('enrollment_notice', $message);
     }
 
     /**
@@ -94,6 +116,7 @@ class EnrollmentController extends Controller
     public function applicantDashboard()
     {
         $user = Auth::user();
+
         return view('cadet.applicant-dashboard', compact('user'));
     }
 }

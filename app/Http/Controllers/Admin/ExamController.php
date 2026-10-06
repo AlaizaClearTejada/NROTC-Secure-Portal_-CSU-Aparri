@@ -4,8 +4,8 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Exam;
-use App\Models\ExamQuestion;
 use App\Models\ExamAttempt;
+use App\Models\ExamQuestion;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -16,10 +16,11 @@ class ExamController extends Controller
         $query = Exam::with('creator')->withCount('questions', 'attempts');
 
         if ($request->filled('subject')) {
-            $query->where('subject', 'like', '%' . $request->subject . '%');
+            $query->where('subject', 'like', '%'.$request->subject.'%');
         }
 
         $exams = $query->latest()->paginate(15);
+
         return view('admin.exams.index', compact('exams'));
     }
 
@@ -60,7 +61,7 @@ class ExamController extends Controller
 
     public function show(Exam $exam)
     {
-        $exam->load(['questions' => function($q) {
+        $exam->load(['questions' => function ($q) {
             $q->orderBy('part')->orderBy('order_index');
         }]);
 
@@ -104,6 +105,7 @@ class ExamController extends Controller
     public function destroy(Exam $exam)
     {
         $exam->delete();
+
         return redirect()->route('admin.exams.index')->with('success', 'Exam deleted.');
     }
 
@@ -124,8 +126,14 @@ class ExamController extends Controller
                 'options' => 'required|array|min:2',
                 'correct_answer_mc' => 'required|string',
             ]);
-            $data['options'] = array_values(array_filter($request->options));
-            $data['correct_answers'] = [$request->correct_answer_mc];
+            $choices = ExamQuestion::compactChoices($request->options, $request->correct_answer_mc);
+
+            if (! $choices) {
+                return back()->withInput()->withErrors(['options' => 'Fill in at least two choices and mark a filled-in choice as the correct answer.']);
+            }
+
+            $data['options'] = $choices['options'];
+            $data['correct_answers'] = [$choices['correct_answer']];
         } elseif ($request->type === 'identification') {
             $request->validate([
                 'correct_answer_ident' => 'required|string',
@@ -146,18 +154,21 @@ class ExamController extends Controller
     public function destroyQuestion(Exam $exam, ExamQuestion $question)
     {
         $question->delete();
+
         return back()->with('success', 'Question removed.');
     }
 
     public function results(Exam $exam)
     {
         $attempts = $exam->attempts()->with('user')->orderBy('score_objective', 'desc')->paginate(20);
+
         return view('admin.exams.results', compact('exam', 'attempts'));
     }
 
     public function showAttempt(Exam $exam, ExamAttempt $attempt)
     {
         $attempt->load(['user', 'answers.question']);
+
         return view('admin.exams.attempt', compact('exam', 'attempt'));
     }
 

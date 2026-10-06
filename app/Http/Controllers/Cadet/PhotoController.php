@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Cadet;
 
 use App\Http\Controllers\Controller;
+use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -19,7 +20,7 @@ class PhotoController extends Controller
             'photo' => ['required', 'image', 'mimes:jpeg,png,jpg', 'max:2048'],
         ]);
 
-        /** @var \App\Models\User $user */
+        /** @var User $user */
         $user = Auth::user();
 
         // Delete the old photo if one exists.

@@ -8,8 +8,8 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\View\View;
 use Illuminate\Validation\ValidationException;
+use Illuminate\View\View;
 
 class AuthController extends Controller
 {
@@ -20,8 +20,9 @@ class AuthController extends Controller
     public function showLoginForm(Request $request): View|RedirectResponse
     {
         if (Auth::check()) {
-            /** @var \App\Models\User $user */
+            /** @var User $user */
             $user = Auth::user();
+
             return redirect($user->dashboardRoute());
         }
 
@@ -65,21 +66,21 @@ class AuthController extends Controller
         $enrollReturn = $request->session()->has('_enroll_return');
 
         // Gate 1 – unknown user
-        if (!$user) {
+        if (! $user) {
             throw ValidationException::withMessages([
                 'login_id' => ['The provided credentials are incorrect or the account is inactive.'],
             ]);
         }
 
         // Gate 2 – inactive account
-        if (!$user->is_active) {
+        if (! $user->is_active) {
             // Cadets who just registered (null) or submitted their form (pending/medical/revision)
             // may log in so they can complete/view their enrollment application.
             if ($user->isCadet() && in_array($user->enrollment_status, [
-                null, 
-                \App\Models\User::ENROLLMENT_PENDING_REVIEW,
-                \App\Models\User::ENROLLMENT_MEDICAL_REVIEW,
-                \App\Models\User::ENROLLMENT_REVISION_REQUESTED
+                null,
+                User::ENROLLMENT_PENDING_REVIEW,
+                User::ENROLLMENT_MEDICAL_REVIEW,
+                User::ENROLLMENT_REVISION_REQUESTED,
             ], true)) {
                 // fall through to credential check
             } elseif ($user->isCadet() && $user->isEnrollmentRejected()) {
@@ -98,26 +99,26 @@ class AuthController extends Controller
             $minutesRemaining = (int) now()->diffInMinutes($user->locked_until, false);
             throw ValidationException::withMessages([
                 'login_id' => [
-                    "This account has been temporarily locked due to multiple failed login attempts. "
-                    . "Please try again in {$minutesRemaining} minute(s).",
+                    'This account has been temporarily locked due to multiple failed login attempts. '
+                    ."Please try again in {$minutesRemaining} minute(s).",
                 ],
             ]);
         }
 
         // ── Credential verification ───────────────────────────────────────────
-        if (!Hash::check($validated['password'], $user->password)) {
+        if (! Hash::check($validated['password'], $user->password)) {
             $attempts = $user->login_attempts + 1;
 
             if ($attempts >= User::MAX_LOGIN_ATTEMPTS) {
                 $user->update([
                     'login_attempts' => $attempts,
-                    'locked_until'   => now()->addMinutes(User::LOCKOUT_MINUTES),
+                    'locked_until' => now()->addMinutes(User::LOCKOUT_MINUTES),
                 ]);
 
                 throw ValidationException::withMessages([
                     'login_id' => [
                         'Too many failed login attempts. This account has been locked for '
-                        . User::LOCKOUT_MINUTES . ' minutes.',
+                        .User::LOCKOUT_MINUTES.' minutes.',
                     ],
                 ]);
             }
@@ -135,8 +136,8 @@ class AuthController extends Controller
         // ── Successful authentication ─────────────────────────────────────────
         $user->update([
             'login_attempts' => 0,
-            'locked_until'   => null,
-            'last_login_at'  => now(),
+            'locked_until' => null,
+            'last_login_at' => now(),
         ]);
 
         Auth::login($user, $request->boolean('remember'));

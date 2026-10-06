@@ -7,7 +7,7 @@
 @section('topbar') @endsection
 
 @section('content')
-<div x-data="examRoom({{ $exam->id }}, {{ $exam->duration_minutes ? $attempt->started_at->addMinutes($exam->duration_minutes)->timestamp : 'null' }}, {{ $exam->auto_submit_on_tab_switch ? 'true' : 'false' }}, {{ $exam->prevent_back_navigation ? 'true' : 'false' }})" class="min-h-screen bg-slate-100 flex flex-col fixed inset-0 z-50">
+<div x-data="examRoom({{ $exam->id }}, {{ $attempt->deadline($exam)?->timestamp ?? 'null' }}, {{ $exam->auto_submit_on_tab_switch ? 'true' : 'false' }}, {{ $exam->prevent_back_navigation ? 'true' : 'false' }})" class="min-h-screen bg-slate-100 flex flex-col fixed inset-0 z-50">
     
     {{-- Exam Header (Fixed top) --}}
     <header class="bg-blue-800 text-white px-6 py-4 shadow-md shrink-0 flex items-center justify-between z-10">
@@ -241,7 +241,8 @@
                 })
                 .then(res => res.json())
                 .then(data => {
-                    if (isFinal && data.redirect) {
+                    if (data.redirect) {
+                        this.isSubmitting = true;
                         window.location.href = data.redirect;
                     } else if (data.success) {
                         this.saveStatus = 'Saved';

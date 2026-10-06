@@ -15,10 +15,11 @@ class LectureMaterialController extends Controller
         $query = LectureMaterial::with('creator');
 
         if ($request->filled('subject')) {
-            $query->where('subject', 'like', '%' . $request->subject . '%');
+            $query->where('subject', 'like', '%'.$request->subject.'%');
         }
 
         $materials = $query->latest()->paginate(15);
+
         return view('officer.materials.index', compact('materials'));
     }
 
@@ -125,7 +126,7 @@ class LectureMaterialController extends Controller
         if ($material->file_path && Storage::disk('public')->exists($material->file_path)) {
             Storage::disk('public')->delete($material->file_path);
         }
-        
+
         $material->delete();
 
         return redirect()->route('officer.materials.index')->with('success', 'Lecture material deleted.');

@@ -8,20 +8,15 @@
 
     <form method="POST" action="{{ route('password.store') }}" id="resetForm" novalidate>
         @csrf
-        <input type="hidden" name="token" value="{{ $request->route('token') }}">
 
-        {{-- Email --}}
+        {{-- Email (verified by code, read-only) --}}
         <div style="margin-bottom: 1.125rem;">
             <label class="auth-label" for="email">Email Address</label>
-            <input class="auth-input @error('email') is-error @enderror"
-                   type="email" id="email" name="email"
-                   value="{{ old('email', $request->email) }}"
-                   placeholder="you@csuaparri.edu.ph"
+            <input class="auth-input"
+                   type="email" id="email"
+                   value="{{ $email }}"
                    autocomplete="username"
-                   autofocus required>
-            @error('email')
-                <div class="auth-field-error" role="alert">{{ $message }}</div>
-            @enderror
+                   readonly>
             <div class="auth-field-error" id="email-client-error" role="alert" style="display:none;"></div>
         </div>
 

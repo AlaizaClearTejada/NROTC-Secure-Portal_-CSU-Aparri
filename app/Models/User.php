@@ -3,31 +3,40 @@
 namespace App\Models;
 
 use Database\Factories\UserFactory;
+use Illuminate\Auth\MustVerifyEmail as MustVerifyEmailTrait;
+use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 
-class User extends Authenticatable
+class User extends Authenticatable implements MustVerifyEmail
 {
     /** @use HasFactory<UserFactory> */
-    use HasFactory, Notifiable;
+    use HasFactory, MustVerifyEmailTrait, Notifiable;
 
     // ── Role constants ────────────────────────────────────────────────────────
-    const ROLE_ADMIN   = 'admin';
+    const ROLE_ADMIN = 'admin';
+
     const ROLE_OFFICER = 'officer';
-    const ROLE_CADET   = 'cadet';
+
+    const ROLE_CADET = 'cadet';
 
     // ── Enrollment status constants ───────────────────────────────────────────
-    const ENROLLMENT_PENDING_REVIEW     = 'pending_review';
-    const ENROLLMENT_MEDICAL_REVIEW     = 'under_medical_review';
+    const ENROLLMENT_PENDING_REVIEW = 'pending_review';
+
+    const ENROLLMENT_MEDICAL_REVIEW = 'under_medical_review';
+
     const ENROLLMENT_REVISION_REQUESTED = 'revision_requested';
-    const ENROLLMENT_APPROVED           = 'approved';
-    const ENROLLMENT_REJECTED           = 'rejected';
+
+    const ENROLLMENT_APPROVED = 'approved';
+
+    const ENROLLMENT_REJECTED = 'rejected';
 
     // ── Lockout policy ────────────────────────────────────────────────────────
     const MAX_LOGIN_ATTEMPTS = 5;
-    const LOCKOUT_MINUTES    = 15;
+
+    const LOCKOUT_MINUTES = 15;
 
     // ── Mass-assignable fields ────────────────────────────────────────────────
     protected $fillable = [
@@ -81,12 +90,28 @@ class User extends Authenticatable
     {
         return [
             'email_verified_at' => 'datetime',
-            'password'          => 'hashed',
-            'is_active'         => 'boolean',
-            'locked_until'      => 'datetime',
-            'last_login_at'     => 'datetime',
-            'date_of_birth'     => 'date',
+            'password' => 'hashed',
+            'is_active' => 'boolean',
+            'locked_until' => 'datetime',
+            'last_login_at' => 'datetime',
+            'date_of_birth' => 'date',
         ];
+    }
+
+    /**
+     * Email a one-time code used to verify the address (replaces the default signed link).
+     */
+    public function sendEmailVerificationNotification(): void
+    {
+        $this->sendOneTimePassword(OneTimePassword::PURPOSE_EMAIL_VERIFICATION);
+    }
+
+    /**
+     * Generate a one-time code for the given purpose and email it to this user.
+     */
+    public function sendOneTimePassword(string $purpose): void
+    {
+        OneTimePassword::send($this->email, $purpose, $this->first_name ?: $this->name);
     }
 
     /**
@@ -139,10 +164,10 @@ class User extends Authenticatable
         }
 
         return [
-            'last_name'   => $lastName,
-            'first_name'  => $firstName,
+            'last_name' => $lastName,
+            'first_name' => $firstName,
             'middle_name' => $middleName,
-            'suffix'      => $suffix,
+            'suffix' => $suffix,
         ];
     }
 
@@ -217,21 +242,29 @@ class User extends Authenticatable
     }
 
     /**
+     * Only cadets whose enrollment has not been approved may fill in or resubmit the form.
+     */
+    public function canSubmitEnrollment(): bool
+    {
+        return $this->isCadet() && ! $this->isEnrollmentApproved();
+    }
+
+    /**
      * Returns the home dashboard URL for this user's role.
      */
     public function dashboardRoute(): string
     {
-        if ($this->isCadet() && !$this->is_active &&
+        if ($this->isCadet() && ! $this->is_active &&
             in_array($this->enrollment_status, [null, self::ENROLLMENT_PENDING_REVIEW, self::ENROLLMENT_MEDICAL_REVIEW, self::ENROLLMENT_REVISION_REQUESTED, self::ENROLLMENT_REJECTED], true)) {
             // They have not been approved yet. Route them to applicant dashboard or enroll form
             return $this->enrollment_status === null ? route('enroll.form') : route('cadet.applicant.dashboard');
         }
 
         return match ($this->role) {
-            self::ROLE_ADMIN   => route('admin.dashboard'),
+            self::ROLE_ADMIN => route('admin.dashboard'),
             self::ROLE_OFFICER => route('officer.dashboard'),
-            self::ROLE_CADET   => route('cadet.dashboard'),
-            default            => route('login'),
+            self::ROLE_CADET => route('cadet.dashboard'),
+            default => route('login'),
         };
     }
 

@@ -57,14 +57,14 @@ class EnrollmentController extends Controller
         $query = User::query()
             ->where('role', User::ROLE_CADET)
             ->where('enrollment_status', User::ENROLLMENT_PENDING_REVIEW);
-            
+
         if ($courseYearFilter) {
             $query->where('course_year', $courseYearFilter);
         }
 
         $count = $query->update([
             'enrollment_status' => User::ENROLLMENT_APPROVED,
-            'is_active'         => true,
+            'is_active' => true,
         ]);
 
         return redirect()->back()->with('success', "{$count} enrollment(s) have been approved and activated.");
@@ -97,7 +97,7 @@ class EnrollmentController extends Controller
 
         $user->update([
             'enrollment_status' => User::ENROLLMENT_REVISION_REQUESTED,
-            'revision_notes'    => $request->input('revision_notes'),
+            'revision_notes' => $request->input('revision_notes'),
         ]);
 
         return redirect()->route('admin.enrollments.show', $user)
@@ -109,9 +109,9 @@ class EnrollmentController extends Controller
         abort_if($user->role !== User::ROLE_CADET, 404);
 
         $user->update([
-            'enrollment_status'  => User::ENROLLMENT_APPROVED,
+            'enrollment_status' => User::ENROLLMENT_APPROVED,
             'enrollment_remarks' => $request->input('remarks'),
-            'is_active'          => true,
+            'is_active' => true,
         ]);
 
         return redirect()->route('admin.enrollments.index')
@@ -125,9 +125,9 @@ class EnrollmentController extends Controller
         $request->validate(['remarks' => 'nullable|string|max:500']);
 
         $user->update([
-            'enrollment_status'  => User::ENROLLMENT_REJECTED,
+            'enrollment_status' => User::ENROLLMENT_REJECTED,
             'enrollment_remarks' => $request->input('remarks'),
-            'is_active'          => false,
+            'is_active' => false,
         ]);
 
         return redirect()->route('admin.enrollments.index')

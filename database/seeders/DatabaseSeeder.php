@@ -72,7 +72,7 @@ class DatabaseSeeder extends Seeder
         );
 
         // ── Seed Cadets in Various States ───────────────────────────────────────
-        
+
         // 1. Approved Cadet (Active)
         User::factory()->create([
             'name' => 'Approved Cadet',

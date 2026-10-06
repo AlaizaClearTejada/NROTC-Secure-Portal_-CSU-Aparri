@@ -4,8 +4,9 @@ namespace App\Http\Controllers\Cadet;
 
 use App\Http\Controllers\Controller;
 use App\Models\Exam;
-use App\Models\ExamAttempt;
 use App\Models\ExamAnswer;
+use App\Models\ExamAttempt;
+use App\Models\ExamQuestion;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -16,12 +17,13 @@ class ExamController extends Controller
         $query = Exam::where('is_published', true)->whereIn('status', ['scheduled', 'open', 'closed']);
 
         $exams = $query->latest()->paginate(15);
+
         return view('cadet.exams.index', compact('exams'));
     }
 
     public function show(Exam $exam)
     {
-        if (!$exam->is_published) {
+        if (! $exam->is_published) {
             abort(404);
         }
 
@@ -36,6 +38,10 @@ class ExamController extends Controller
     {
         if ($exam->status !== 'open') {
             return back()->with('error', 'This exam is not currently open.');
+        }
+
+        if ($exam->end_time?->isPast()) {
+            return back()->with('error', 'This exam has already ended.');
         }
 
         $attempt = ExamAttempt::firstOrCreate([
@@ -63,15 +69,11 @@ class ExamController extends Controller
             return redirect()->route('cadet.exams.show', $exam)->with('error', 'You have already completed this exam.');
         }
 
-        // Check if time expired
-        if ($exam->duration_minutes) {
-            $timeLimit = $attempt->started_at->copy()->addMinutes($exam->duration_minutes);
-            if (now()->isAfter($timeLimit)) {
-                return $this->autoSubmit($attempt);
-            }
+        if ($attempt->isPastDeadline($exam)) {
+            return $this->autoSubmit($attempt);
         }
 
-        $exam->load(['questions' => function($q) {
+        $exam->load(['questions' => function ($q) {
             $q->orderBy('part')->orderBy('order_index');
         }]);
 
@@ -87,7 +89,15 @@ class ExamController extends Controller
             ->firstOrFail();
 
         if ($attempt->status !== 'in_progress') {
-            return response()->json(['success' => false, 'message' => 'Exam already submitted.']);
+            return response()->json(['success' => false, 'message' => 'Exam already submitted.', 'redirect' => route('cadet.exams.show', $exam)]);
+        }
+
+        if ($attempt->isPastDeadline($exam, ExamAttempt::SUBMIT_GRACE_SECONDS)) {
+            $response = $this->autoSubmit($attempt);
+
+            return $request->wantsJson()
+                ? response()->json(['success' => false, 'message' => 'Time expired.', 'redirect' => route('cadet.exams.show', $exam)])
+                : $response;
         }
 
         $isFinal = $request->input('is_final', false);
@@ -101,7 +111,9 @@ class ExamController extends Controller
 
         foreach ($exam->questions as $question) {
             $answerVal = $answersData[$question->id] ?? null;
-            if (!$answerVal) continue;
+            if (! $answerVal) {
+                continue;
+            }
 
             $isCorrect = false;
             $pointsAwarded = 0;
@@ -122,11 +134,11 @@ class ExamController extends Controller
             } elseif ($question->type === 'enumeration') {
                 // simple grading for enumeration: 1 point for each correct match (if that's the logic)
                 // For now, if all required answers are present (case insensitive)
-                $corrects = array_map('strtolower', array_map('trim', $question->correct_answers ?? []));
-                $givens = array_map('strtolower', array_map('trim', $answerArray));
-                
+                $corrects = array_unique(ExamQuestion::enumerationItems($question->correct_answers ?? []));
+                $givens = ExamQuestion::enumerationItems($answerArray);
+
                 $matched = array_intersect($corrects, $givens);
-                
+
                 // Assign partial points based on matches, or require all.
                 // Let's do partial: (matches / total) * points
                 if (count($corrects) > 0) {
@@ -159,10 +171,11 @@ class ExamController extends Controller
                 'status' => 'completed',
                 'force_submitted' => $isForced,
             ]);
-            
+
             if ($request->wantsJson()) {
                 return response()->json(['success' => true, 'redirect' => route('cadet.exams.show', $exam)]);
             }
+
             return redirect()->route('cadet.exams.show', $exam)->with('success', 'Exam submitted successfully.');
         }
 
@@ -178,6 +191,7 @@ class ExamController extends Controller
 
         if ($attempt) {
             $attempt->increment('tab_switch_count');
+
             return response()->json(['success' => true, 'count' => $attempt->tab_switch_count]);
         }
 

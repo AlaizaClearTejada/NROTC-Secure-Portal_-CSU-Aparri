@@ -1,4 +1,11 @@
-# CSU Aparri NROTC – Secure Information Management System
+# CSU Aparri NROTC â€“ Secure Information Management System
+
+TITLE: Design and Implementation of a secure login and role-based access System for CSU-Aparri NROTC
+
+MEMBERS:
+Beltran Juvylyn,
+Calpito Angelyn,
+Yabes Larry
 
 A Laravel-based web application providing hardened record-keeping and access control for the **Cagayan State University Aparri Naval Reserve Officers Training Corps (NROTC)** unit.
 
@@ -15,20 +22,20 @@ Design and implement a secure login and role-based access system for CSU Aparri 
 ### 1. Authentication System (OWASP A07)
 | Control | Implementation |
 |---|---|
-| Password hashing | **bcrypt** via Laravel's `hashed` cast — plain-text passwords never stored |
+| Password hashing | **bcrypt** via Laravel's `hashed` cast â€” plain-text passwords never stored |
 | Brute-force protection | Account locked for **15 minutes** after **5** consecutive failed attempts |
 | Session fixation prevention | `session()->regenerate()` called on every successful login |
 | Session timeout | Auto-logout after **30 minutes** of inactivity (`SessionTimeout` middleware) |
 | CSRF protection | Laravel `VerifyCsrfToken` middleware on all POST/PATCH routes |
-| Input validation | Strict rules on all request inputs — prevents SQL Injection (OWASP A03) |
+| Input validation | Strict rules on all request inputs â€” prevents SQL Injection (OWASP A03) |
 | User enumeration prevention | Generic error messages for unknown email / inactive accounts |
 
-### 2. Role-Based Access Control — RBAC (OWASP A01)
+### 2. Role-Based Access Control â€” RBAC (OWASP A01)
 | Role | Permissions |
 |---|---|
 | **Administrator** | Create/deactivate accounts, unlock locked users, view all statistics, configure system |
-| **Officer** | View cadet roster, mark attendance (future), record grades (future) — read-only |
-| **Cadet** | View own profile, own attendance, own grades — cannot see other cadets' data |
+| **Officer** | View cadet roster, mark attendance (future), record grades (future) â€” read-only |
+| **Cadet** | View own profile, own attendance, own grades â€” cannot see other cadets' data |
 
 RBAC is enforced by the `EnsureRole` middleware, applied per route group.
 
@@ -44,19 +51,19 @@ RBAC is enforced by the `EnsureRole` middleware, applied per route group.
 ```
 app/
 +-- Http/
-¦   +-- Controllers/
-¦   ¦   +-- Auth/AuthController.php        # Login, logout, lockout logic
-¦   ¦   +-- Admin/DashboardController.php  # Admin CRUD + account management
-¦   ¦   +-- Officer/DashboardController.php
-¦   ¦   +-- Cadet/DashboardController.php
-¦   +-- Middleware/
-¦       +-- EnsureRole.php                 # RBAC enforcement
-¦       +-- SessionTimeout.php            # Idle-session expiry
+Â¦   +-- Controllers/
+Â¦   Â¦   +-- Auth/AuthController.php        # Login, logout, lockout logic
+Â¦   Â¦   +-- Admin/DashboardController.php  # Admin CRUD + account management
+Â¦   Â¦   +-- Officer/DashboardController.php
+Â¦   Â¦   +-- Cadet/DashboardController.php
+Â¦   +-- Middleware/
+Â¦       +-- EnsureRole.php                 # RBAC enforcement
+Â¦       +-- SessionTimeout.php            # Idle-session expiry
 +-- Models/User.php                        # Role helpers, lockout helpers
 database/
 +-- migrations/
-¦   +-- 0001_01_01_000000_create_users_table.php
-¦   +-- 2026_03_24_000001_add_nrotc_fields_to_users_table.php
+Â¦   +-- 0001_01_01_000000_create_users_table.php
+Â¦   +-- 2026_03_24_000001_add_nrotc_fields_to_users_table.php
 +-- seeders/DatabaseSeeder.php             # Default admin/officer/cadet accounts
 resources/views/
 +-- layouts/app.blade.php                  # Shared authenticated layout
@@ -108,7 +115,7 @@ npm install && npm run build
 php artisan serve
 ```
 
-Open http://localhost:8000 — you will be redirected to /login.
+Open http://localhost:8000 â€” you will be redirected to /login.
 
 ### Default Credentials (change immediately in production)
 

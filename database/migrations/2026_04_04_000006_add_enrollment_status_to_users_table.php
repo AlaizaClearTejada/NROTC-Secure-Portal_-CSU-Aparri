@@ -10,8 +10,8 @@ return new class extends Migration
     {
         Schema::table('users', function (Blueprint $table) {
             $table->string('enrollment_status', 50)
-                  ->nullable()
-                  ->after('is_active');
+                ->nullable()
+                ->after('is_active');
             $table->text('enrollment_remarks')->nullable()->after('enrollment_status');
         });
     }

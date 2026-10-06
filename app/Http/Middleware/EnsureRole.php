@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\User;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -23,25 +24,25 @@ class EnsureRole
 {
     public function handle(Request $request, Closure $next, string ...$roles): Response
     {
-        if (!Auth::check()) {
+        if (! Auth::check()) {
             return redirect()->route('login');
         }
 
-        /** @var \App\Models\User $user */
+        /** @var User $user */
         $user = Auth::user();
 
         // Force-logout deactivated accounts even if a valid session exists.
         // Exception: pending-enrollment cadets are allowed to stay logged in
         // so they can access and submit their enrollment form.
-        if (!$user->is_active) {
+        if (! $user->is_active) {
             if ($user->isCadet() && in_array($user->enrollment_status, [
-                null, 
-                \App\Models\User::ENROLLMENT_PENDING_REVIEW,
-                \App\Models\User::ENROLLMENT_MEDICAL_REVIEW,
-                \App\Models\User::ENROLLMENT_REVISION_REQUESTED
+                null,
+                User::ENROLLMENT_PENDING_REVIEW,
+                User::ENROLLMENT_MEDICAL_REVIEW,
+                User::ENROLLMENT_REVISION_REQUESTED,
             ], true)) {
-                return $user->enrollment_status === null 
-                    ? redirect()->route('enroll.form') 
+                return $user->enrollment_status === null
+                    ? redirect()->route('enroll.form')
                     : redirect()->route('cadet.applicant.dashboard');
             }
 
@@ -53,7 +54,7 @@ class EnsureRole
                 ->withErrors(['email' => 'Your account has been deactivated. Contact the administrator.']);
         }
 
-        if (!in_array($user->role, $roles, strict: true)) {
+        if (! in_array($user->role, $roles, strict: true)) {
             abort(403, 'Access denied. You do not have the required permissions to view this page.');
         }
 

@@ -173,6 +173,12 @@
 
                 {{-- Page content --}}
                 <main class="flex-1 p-8 overflow-auto">
+                    @if (session('enrollment_notice'))
+                        <div class="mb-4 px-4 py-3 rounded-lg text-sm font-medium"
+                             style="background: #fffbeb; border: 1px solid #fde68a; color: #92400e;">
+                            {{ session('enrollment_notice') }}
+                        </div>
+                    @endif
                     @yield('content')
                 </main>
 

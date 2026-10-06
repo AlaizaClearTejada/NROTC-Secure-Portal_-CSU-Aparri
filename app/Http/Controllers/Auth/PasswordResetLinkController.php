@@ -3,16 +3,17 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Auth\SendPasswordResetCodeRequest;
+use App\Models\OneTimePassword;
+use App\Models\User;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Password;
-use Illuminate\Validation\ValidationException;
+use Illuminate\Support\Facades\Session;
 use Illuminate\View\View;
 
 class PasswordResetLinkController extends Controller
 {
     /**
-     * Display the password reset link request view.
+     * Display the forgot password form.
      */
     public function create(): View
     {
@@ -20,26 +21,40 @@ class PasswordResetLinkController extends Controller
     }
 
     /**
-     * Handle an incoming password reset link request.
-     *
-     * @throws ValidationException
+     * Send an OTP to a registered email address.
      */
-    public function store(Request $request): RedirectResponse
+    public function store(SendPasswordResetCodeRequest $request): RedirectResponse
     {
-        $request->validate([
-            'email' => ['required', 'email'],
-        ]);
+        $email = strtolower($request->validated('email'));
+        $user = User::query()->where('email', $email)->first();
 
-        // We will send the password reset link to this user. Once we have attempted
-        // to send the link, we will examine the response then see the message we
-        // need to show to the user. Finally, we'll send out a proper response.
-        $status = Password::sendResetLink(
-            $request->only('email')
-        );
+        if (! $user) {
+            return back()
+                ->withInput($request->only('email'))
+                ->withErrors(['email' => 'This email is not registered in the system.']);
+        }
 
-        return $status == Password::RESET_LINK_SENT
-                    ? back()->with('status', __($status))
-                    : back()->withInput($request->only('email'))
-                        ->withErrors(['email' => __($status)]);
+        if (OneTimePassword::isInCooldown($email, OneTimePassword::PURPOSE_PASSWORD_RESET)) {
+            Session::put(PasswordResetCodeController::EMAIL_SESSION_KEY, $email);
+
+            return redirect()->route('password.otp')
+                ->with('status', 'An OTP was already sent. Please wait a minute before requesting another.');
+        }
+
+        try {
+            $user->sendOneTimePassword(OneTimePassword::PURPOSE_PASSWORD_RESET);
+        } catch (\Throwable $exception) {
+            report($exception);
+
+            return back()
+                ->withInput($request->only('email'))
+                ->withErrors(['email' => 'We could not send the OTP right now. Please try again shortly.']);
+        }
+
+        Session::put(PasswordResetCodeController::EMAIL_SESSION_KEY, $email);
+        Session::forget(NewPasswordController::VERIFIED_EMAIL_SESSION_KEY);
+
+        return redirect()->route('password.otp')
+            ->with('status', 'An OTP has been sent to your email.');
     }
 }

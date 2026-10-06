@@ -52,7 +52,7 @@ class DashboardController extends Controller
             $validated['last_name'],
         ])));
 
-        User::create([
+        $user = User::create([
             'name' => $fullName,
             'student_id' => $validated['student_id'],
             'email' => $validated['email'],
@@ -61,8 +61,18 @@ class DashboardController extends Controller
             'is_active' => true,
         ]);
 
+        try {
+            $user->sendEmailVerificationNotification();
+        } catch (\Throwable $exception) {
+            report($exception);
+
+            return redirect()->route('admin.dashboard')
+                ->with('success', "Account for {$fullName} created successfully.")
+                ->with('error', 'The OTP could not be emailed. The user can request one after signing in.');
+        }
+
         return redirect()->route('admin.dashboard')
-            ->with('success', "Account for {$fullName} created successfully.");
+            ->with('success', "Account for {$fullName} created successfully. An OTP was sent to {$user->email}.");
     }
 
     /**

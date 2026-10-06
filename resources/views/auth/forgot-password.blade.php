@@ -1,7 +1,7 @@
 <x-guest-layout>
 
     <p style="font-size: .85rem; color: #6b7280; line-height: 1.55; margin-bottom: 1.25rem;">
-        Enter your registered email address and we'll send you a link to reset your password.
+        Enter your registered email address and we'll send you a 6-digit OTP to reset your password.
     </p>
 
     @if (session('status'))
@@ -32,7 +32,7 @@
             <div class="auth-field-error" id="email-client-error" role="alert" style="display:none;"></div>
         </div>
 
-        <button type="submit" class="auth-submit">Send Reset Link</button>
+        <button type="submit" class="auth-submit">Send OTP</button>
 
         <div style="margin-top: 1.25rem; text-align: center;">
             <a href="{{ route('login') }}" class="auth-forgot" style="font-size: .8rem;">
